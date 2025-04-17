@@ -426,29 +426,6 @@ return $response;
 }
 
 
-// function sendTwilioMessage($url, $body, $sid, $token) {
-//     try {
-//         // Create a new Twilio client instance
-//         $twilio = new Twilio\Rest\Client($sid, $token);
-        
-//         // Send the message
-//          $message = $twilio->messages->create($url, [
-//             "from" => '(229) 441-3190', // Use your Twilio-verified number
-//             "body" => $body
-//         ]);
-        
-//         // Return the message SID on success
-//         return $message->sid;
-//     } catch (Exception $e) {
-//         // Handle exceptions
-//         return "Error: " . $e->getMessage();
-//     }
-// }
-
-
-
-
-//         }
         public function createCardHolder($url, $data) {
             // Initialize cURL session
             $ch = curl_init();
