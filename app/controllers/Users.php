@@ -10,6 +10,194 @@ Class Users extends Controller
     $this->serverKey  = 'secret_server_key'.date("H");
   }
   
+public function chats() {
+    $sentData = $this->getData();
+
+    $userId1 = $sentData['userId1'] ?? null;
+    $userId2 = $sentData['userId2'] ?? null;
+
+    if (!$userId1 || !$userId2) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => false,
+            'message' => 'Missing user IDs',
+        ]);
+        return;
+    }
+
+    // Ensure both users exist in users table
+    $this->userModel->ensureUserExists($userId1);
+    $this->userModel->ensureUserExists($userId2);
+
+    // echo "helo"; exit;
+    // Get or create chat
+    $chat = $this->userModel->getOrCreateChat($userId1, $userId2);
+
+    if ($chat) {
+        echo json_encode([
+            'status' => true,
+            'message' => 'success',
+            'data' => $chat
+        ]);
+    } else {
+        http_response_code(500);
+        echo json_encode([
+            'status' => false,
+            'message' => 'Failed to get or create chat'
+        ]);
+    }
+}
+
+
+public function storeUsers()
+{
+    $sentData = $this->getData();
+
+    if (!isset($sentData['users']) || !is_array($sentData['users'])) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => false,
+            'message' => 'Invalid or missing users data'
+        ]);
+        return;
+    }
+
+    $result = $this->userModel->saveUsers($sentData['users']);
+
+    if ($result) {
+        echo json_encode([
+            'status' => true,
+            'message' => 'Users saved successfully'
+        ]);
+    } else {
+        http_response_code(500);
+        echo json_encode([
+            'status' => false,
+            'message' => 'Failed to save users'
+        ]);
+    }
+}
+
+
+public function chatsunread_count() {
+    $data = $this->getData();
+    $userId = $data['userId'] ?? null;
+
+    if (!$userId) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => false,
+            'message' => 'userId is required'
+        ]);
+        return;
+    }
+
+    $count = $this->userModel->getUnreadMessageCount($userId);
+
+    echo json_encode([
+        'status' => true,
+        'message' => 'Unread count retrieved',
+        'count' => $count
+    ]);
+}
+
+
+public function messagesread() {
+    $data = $this->getData();
+    $chatId = $data['chatId'] ?? null;
+    $userId = $data['userId'] ?? null;
+
+    if (!$chatId || !$userId) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => false,
+            'message' => 'chatId and userId are required'
+        ]);
+        return;
+    }
+
+    $this->userModel->markMessagesAsRead($chatId, $userId);
+
+    echo json_encode([
+        'status' => true,
+        'message' => 'Messages marked as read'
+    ]);
+}
+
+
+
+public function chatsuser() {
+    $data = $this->getData();
+    $userId = $data['userId'] ?? null;
+
+    if (!$userId) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => false,
+            'message' => 'userId is required'
+        ]);
+        return;
+    }
+
+    $chats = $this->userModel->getChatsByUserId($userId);
+
+    echo json_encode([
+        'status' => true,
+        'message' => 'Chats retrieved',
+        'data' => $chats
+    ]);
+}
+
+
+
+
+// In User.php controller
+
+public function messages() {
+    $data = $this->getData(); // JSON from frontend
+
+    // Call model function to store message
+    $success = $this->userModel->savePersonalMessage($data);
+
+    if ($success) {
+        echo json_encode([
+            'status' => true,
+            'message' => 'Message saved successfully'
+        ]);
+    } else {
+        http_response_code(400);
+        echo json_encode([
+            'status' => false,
+            'message' => 'Failed to save message'
+        ]);
+    }
+}
+
+public function messagesget() {
+    $data = $this->getData(); // get JSON body
+    $chatId = $data['chatId'] ?? null;
+
+    if (!$chatId) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => false,
+            'message' => 'chatId is required'
+        ]);
+        return;
+    }
+
+    $messages = $this->userModel->getMessagesByChatId($chatId);
+
+    echo json_encode([
+        'status' => true,
+        'message' => 'Messages retrieved',
+        'data' => $messages
+    ]);
+}
+
+
+
+  
     public function loginfunc()
   {
     session_start(); // Start a session if it's not started
@@ -67,6 +255,30 @@ Class Users extends Controller
             $loginData = $this->userModel->findLoginByToken($tokenX);
             $userData = $this->userModel->findUserByEmail_det2($loginData->email);
             $accountDetails = $this->userModel->getAccountDetails($userData->account_id, $user_id);
+            
+             $loginData = (array)$loginData;
+        $loginData = array_filter($loginData, function ($value, $key) {
+        return $key !== "nin_no" && $key !== "nin_img" && $key !== "bvn_no";
+    }, ARRAY_FILTER_USE_BOTH);
+        if(!empty($loginData->nin_no)){
+        $loginData['ninVerified'] = 1;
+    }else{
+        $loginData['ninVerified'] = 0;
+    }
+    
+    if(!empty($loginData->nin_img)){
+        $loginData['nin_imgVerified'] = 1; 
+    }else{
+         $loginData['nin_imgVerified'] = 0;
+    }
+    
+    
+    if(!empty($loginData->bvn_no)){
+        $loginData['bvnVerified'] = 1; 
+    }else{
+         $loginData['bvnVerified'] = 0;
+    }
+            
             $initData = [
               'loginData' => $loginData,
               'userAccount' => $accountDetails,
@@ -75,7 +287,7 @@ Class Users extends Controller
             $datatoken = [
               'user_id' => $user_id,
               'email' => $email,
-              'appToken' => $initData['loginData']->token,
+              'appToken' => $loginData->token,
             ];
             $JWT_token = $this->getMyJsonID($datatoken, $this->serverKey);
 
@@ -752,25 +964,30 @@ Class Users extends Controller
 
     $sentData = $this->getData();
     
-    //  if($this->userModel->findUserByPhone($sentData['phone'])){
-    //     http_response_code(404);
-    //   print_r(json_encode(array(
-    //     "status" => false,
-    //     "message" => "phone number already in use ."
-    // )));
-    // exit;
-    // }
-    $url = "https://api.smslive247.com/api/v4/sms";
+     if($this->userModel->findUserByPhone($sentData['phone'])){
+        http_response_code(404);
+      print_r(json_encode(array(
+        "status" => false,
+        "message" => "phone number already in use ."
+    )));
+    exit;
+    }
+    $url = "https://v3.api.termii.com/api/sms/send";
     $senderID = "PAYKING";
     $senderIDazz = "".$this->generateSixDigitValue()."";
 
 $messageBody = ''.$senderIDazz.'.  Do not share it with anyone.
+ 
 ';
       // Prepare the payload
         $payload = json_encode([
-            "messageText" => $messageBody,
-            "mobileNumber" => $sentData['phone'],
-            "senderID" => $senderID
+            "sms" => $messageBody,
+           "to" => '234' . substr($sentData['phone'], 1),
+            "senderID" => $senderID,
+             "channel"=> "generic",
+             "type"=> "plain",
+              "from"=> "vel56",
+              "api_key"=> "TLfVkhvyxKRpMwoOcnGKlMoSsCKNJuNdTDcJAwMBirpZZKZuQfSiLIOAURisIn"
         ]);
         $payload2 = array(
             "messageText" => $messageBody,
@@ -783,20 +1000,20 @@ $messageBody = ''.$senderIDazz.'.  Do not share it with anyone.
  $response = $this->sendCustomMessage($url, $payload);
  $ress = json_decode($response);
  
-      if(isset($ress->batchID)){
+      if($ress->message == "Successfully Sent" && $ress->code == "ok"){
         $payload2['otp'] = password_hash($senderIDazz, PASSWORD_DEFAULT);
         $this->userModel->updateResetToken234($payload2, $userData->email);
         $res = (array(
             'status_code' => 200,
           'status'=> true,
-          'message'=> 'message sent Successfully'
+          'message'=> 'Code sent to Phone Successfully.'
           ));
           $this->handleResponse($res);
         } else {
           $res = (array(
               'status_code' => 404,
             'status'=> false,
-              'message'=> 'failed to send sms'
+              'message'=> 'failed to verifyPhone'
               ));
               $this->handleResponse($res);
             }
@@ -1455,6 +1672,43 @@ if (!$otpMatched) {
       }
     }
     
+    public function  resendotp(){
+      $sentData =  $this->getData();
+      
+      $data['otp'] = $this->generateSixDigitValue();
+$data['email'] = $sentData['email'];
+
+if(empty($data['email'])){
+     $res = (array(
+              'status_code' => 404,
+            'status'=> false,
+              'message'=> 'enter email'
+              ));
+              $this->handleResponse($res);
+}
+
+
+      if($this->sendOTPEmail($data)){
+        $data['otp'] = password_hash($data['otp'], PASSWORD_DEFAULT);
+        $this->userModel->updateResetToken2($data);
+        $res = (array(
+            'status_code' => 200,
+          'status'=> true,
+          'message'=> 'otp sent to '.$data['email']
+          ));
+          $this->handleResponse($res);
+        } else {
+          $res = (array(
+              'status_code' => 404,
+            'status'=> false,
+              'message'=> 'failed to send email'
+              ));
+              $this->handleResponse($res);
+            }
+
+
+    }
+    
     
     
   public function verifyLogin() {
@@ -1616,18 +1870,42 @@ if (!$otpMatched) {
 
     // $user = $this->userModel->getUser($user_id);
       $user = $this->userModel->getUser($user_id);
+       
+            $userData = $this->userModel->findUserByEmail_det2($userData->email);
+            $accountDetails = $this->userModel->getAccountDetails($userData->account_id, $user_id);
     
     $user = (array)$user;
         $user = array_filter($user, function ($value, $key) {
-        return $key !== "password" && $key !== "work" && $key !== "suffix" && $key !== "rank" && $key !== "memberType" && $key !== "maritalStatus" && $key !== "nextKin" && $key !== "activeCode" && $key !== "altEmail";
+        return $key !== "password" && $key !== "work" && $key !== "suffix" && $key !== "rank" && $key !== "memberType" && $key !== "maritalStatus" && $key !== "nextKin" && $key !== "activeCode" && $key !== "altEmail" && $key !== "nin_no" && $key !== "nin_img" && $key !== "bvn_no";
     }, ARRAY_FILTER_USE_BOTH);
+   
     
-
-    if($user){
+    if(!empty($user->nin_no)){
+        $user['ninVerified'] = 1;
+    }else{
+        $user['ninVerified'] = 0;
+    }
+    
+    if(!empty($user->nin_img)){
+        $user['nin_imgVerified'] = 1; 
+    }else{
+         $user['nin_imgVerified'] = 0;
+    }
+    
+    
+    if(!empty($user->bvn_no)){
+        $user['bvnVerified'] = 1; 
+    }else{
+         $user['bvnVerified'] = 0;
+    }
+    
+    
+    if($user && $userData){
       $res = json_encode(array(
         'status'=> true,
         'message'=> 'success',
-        'data'=> $user
+        'user'=> $user,
+        "account" => $accountDetails
         ));
         http_response_code(200);
         print_r($res);
@@ -1742,6 +2020,7 @@ if (!$otpMatched) {
           "address" => trim($sentData["address"]),
           "email" => $userData->email,
           "image" => $_FILES["image"],
+          "nin" => trim($sentData["nin"]),
           "user_id" =>  $userData->user_id,
 
       );
@@ -1775,6 +2054,14 @@ if (!$otpMatched) {
     )));
     exit;
     }
+    // if(!$this->userModel->findUserByNin($data['nin'])){
+    //     http_response_code(404);
+    //   print_r(json_encode(array(
+    //     "status" => false,
+    //     "message" => "NIN already Used registered."
+    // )));
+    // exit;
+    // }
 
       $new_image_names = [];
 
@@ -1863,6 +2150,8 @@ if (!$otpMatched) {
 
   }
   
+  
+ 
   public function register_user()
   {
       
@@ -1903,6 +2192,8 @@ if (!$otpMatched) {
     )));
     exit;
     }
+
+
 
 
       $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
