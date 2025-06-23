@@ -13,6 +13,53 @@ class Transactions extends Controller
         $this->serverKey  = 'secret_server_key' . date("H");
     }
 
+    
+public function hydrogenToken()
+{
+    $url = 'https://api.hydrogenpay.com/walletservice/api/Auth/token';
+
+    $data = json_encode([
+    "username" => "hensley@paykingweb.com",
+    "password" => "Hug@6411#"
+]);
+// Username:
+
+// Password:
+
+// hensley@paykingweb.com
+
+// V^p7zIRwCU60
+    $ch = curl_init();
+
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $data,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'], // Send data as raw JSON
+        CURLOPT_SSL_VERIFYPEER => true,  // Ensure secure SSL connection
+        CURLOPT_TIMEOUT => 30,           // Prevent long waits
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+
+    curl_close($ch);
+
+    if ($error) {
+        echo json_encode(['status' => false, 'message' => "cURL Error: $error"]);
+    }
+
+    if ($httpCode !== 200) {
+        echo json_encode(['status' => false, 'message' => "Request failed with HTTP Code $httpCode", 'response' => json_decode($response, true)]);
+    }
+
+    $res = json_decode($response);
+    $token = $res->data->token;
+    return $token;
+    // echo json_encode(['status' => true, 'response' => ($res)]);
+}
     public function deposite()
     {
         try {
@@ -146,6 +193,59 @@ class Transactions extends Controller
         }
     }
     
+    public function searchbank(){
+      try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' =>  $e->getMessage(),
+            ];
+            print_r(json_encode($res));
+            exit;
+        } catch (DomainException $e) {
+            $res = [
+                'status' => 401,
+                'message' =>  $e->getMessage(),
+            ];
+            print_r(json_encode($res));
+            exit;
+        }
+        $loginData = $this->getData();
+        // Define the search query
+        $search = $loginData['acc']; // You can change this dynamically
+        $token = $this->hydrogenToken();
+        // Construct the URL
+        $url = "https://api.hydrogenpay.com/walletservice/api/v1/FundsTransfer/get-bank-details?search=" . urlencode($search);
+        
+        // Initialize cURL
+        $ch = curl_init();
+        
+        // Set cURL options
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'XAppKey: SK_TEST_749d490144105f572938a7ea27aff8b3',
+            'Authorization: Bearer '.$token,
+          
+        ]);
+        
+        // Execute the request
+        $response = curl_exec($ch);
+        
+        // Check for errors
+        if (curl_errno($ch)) {
+            echo 'Curl error: ' . curl_error($ch);
+        } else {
+            // Display the response
+            echo $response;
+        }
+        
+        // Close cURL
+        curl_close($ch);
+
+    }
+    
       public function getBankList(){
       try {
         $userData = $this->RouteProtecion();
@@ -205,141 +305,194 @@ class Transactions extends Controller
          print_r( $res);
 
     }
-     public function getBankName()
-    {
+    //  public function getBankName()
+    // {
 
-      try {
+    //   try {
+    //     $userData = $this->RouteProtecion();
+    //       } catch (UnexpectedValueException $e) {
+    //     $res = [
+    //       'status' => 401,
+    //       'message' =>  $e->getMessage(),
+    //     ];
+    //     print_r(json_encode($res));
+    //     exit;
+    //     }
+    //     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+   
+    //       $loginData = $this->getData();
+      
+      
+    //       $data = [
+    //         'bankcode'=> $loginData['bank_code'],
+    //         'accountNo'=> $loginData['account'],  
+    //         'email_err'=> '',
+    //         'amount_err'=> '',
+    //         'payfor_err'=> ''
+    //       ];
+      
+      
+    //       if (empty($data['bankcode'])) {
+    //         $response = array(
+    //           'status' => 'false',
+        
+    //           'message' => 'Enter bank code details',
+        
+    //         );
+        
+    //         print_r(json_encode($response));
+    //         exit;
+    //       } else {
+    //         if (strlen($data['bankcode']) != 6) {
+    //           $response = array(
+    //             'status' => 'false',
+          
+    //             'message' => 'Enter bank code details',
+          
+    //           );
+          
+    //           print_r(json_encode($response));
+    //           exit;
+    //         }
+    //       }
+    //       if (empty($data['accountNo'])) {
+    //         $response = array(
+    //           'status' => 'false',
+        
+    //           'message' => 'Enter payfor details',
+        
+    //         );
+        
+    //         print_r(json_encode($response));
+    //         exit;
+    //       } else {
+    //         if (strlen($data['accountNo']) != 10) {
+    //           $response = array(
+    //             'status' => 'false',
+          
+    //             'message' => 'Enter bank account number',
+          
+    //           );
+          
+    //           print_r(json_encode($response));
+    //           exit;
+    //         }
+    //       }
+
+    //         $url = "https://api.hydrogenpay.com/walletservice/api/v1/FundsTransfer/name-enquiry";
+    //       $token = $this->hydrogenToken();
+        
+    //       $ydatax =  [
+    //         "beneficiaryAccount"=> $data['accountNo'],
+    //         "bankCode"=> $data['bankcode'],
+    //       ];
+
+    //       $string = (json_encode($ydatax));
+    //      $curl = curl_init();
+
+    // curl_setopt_array($curl, array(
+    //     CURLOPT_URL => $url,
+    //     CURLOPT_RETURNTRANSFER => true,
+    //     CURLOPT_POST => true,
+    //     CURLOPT_POSTFIELDS => ($string),
+    //     CURLOPT_HTTPHEADER => array(
+    //         'XAppKey: SK_TEST_749d490144105f572938a7ea27aff8b3',
+    //         'Authorization: Bearer '.$token,
+    //     )
+    // ));
+
+    // $response = curl_exec($curl);
+    // curl_close($curl);
+    // echo $response;exit;
+    //       $res = json_decode($response);
+    //     //   $name = $res->data->data->name;
+    //     //   if($res->status == "true" && isset($name)){
+    //     //       $value = [
+    //     //           "status" => true,
+    //     //           'accountName' => $name,
+    //     //           ];
+    //     //           print_r(json_encode($value));
+    //     //   }else{
+    //     //       $value = [
+    //     //           "status" => false,
+    //     //           'message' => "account does not exist",
+    //     //           ];
+    //     //           print_r(json_encode($value));
+    //     //   }
+          
+    //         }
+      
+    // }
+
+public function getBankName()
+{
+    try {
         $userData = $this->RouteProtecion();
-          } catch (UnexpectedValueException $e) {
+    } catch (UnexpectedValueException $e) {
         $res = [
-          'status' => 401,
-          'message' =>  $e->getMessage(),
+            'status' => 401,
+            'message' => $e->getMessage(),
         ];
         print_r(json_encode($res));
         exit;
-        }
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-   
-          $loginData = $this->getData();
-      
-      
-          $data = [
-            'bankcode'=> $loginData['bank_code'],
-            'accountNo'=> $loginData['account'],  
-            'email_err'=> '',
-            'amount_err'=> '',
-            'payfor_err'=> ''
-          ];
-      
-      
-          if (empty($data['bankcode'])) {
-            $response = array(
-              'status' => 'false',
-        
-              'message' => 'Enter bank code details',
-        
-            );
-        
-            print_r(json_encode($response));
-            exit;
-          } else {
-            if (strlen($data['bankcode']) != 6) {
-              $response = array(
-                'status' => 'false',
-          
-                'message' => 'Enter bank code details',
-          
-              );
-          
-              print_r(json_encode($response));
-              exit;
-            }
-          }
-          if (empty($data['accountNo'])) {
-            $response = array(
-              'status' => 'false',
-        
-              'message' => 'Enter payfor details',
-        
-            );
-        
-            print_r(json_encode($response));
-            exit;
-          } else {
-            if (strlen($data['accountNo']) != 10) {
-              $response = array(
-                'status' => 'false',
-          
-                'message' => 'Enter bank account number',
-          
-              );
-          
-              print_r(json_encode($response));
-              exit;
-            }
-          }
-
-          $key2 = "dfaae40b-6457-4c77-932c-6b0ac6733e8a";
-          $urlu =  "https://services2.vpay.africa/api/service/v1/query/lookup/nuban";
-          $password = "Wesson1234$";
-          $names = "samueldickson06@gmail.com" ;
-          $ydata =  [
-            "username"=> $names,
-            "password"=> $password,
-          ];
-
-          $header = [
-            "Content-Type: application/json",
-            "publicKey: ".$key2,
-          ];
-
-          $token = $this->reportModel->getVpayToken();
-          $headerx = [
-            "Content-Type: application/json",
-            "publicKey: ".$key2,
-            "b-access-token: ".$token
-          ];
-        //   print_r(json_encode($headerx));
-          $ydatax =  [
-            "nuban"=> $data['accountNo'],
-            "bank_code"=> $data['bankcode'],
-          ];
-
-          $string = (json_encode($ydatax));
-          $ch = curl_init();
-
-          curl_setopt($ch, CURLOPT_URL, $urlu);
-          curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-          curl_setopt($ch, CURLOPT_HEADER, false);
-
-          curl_setopt($ch, CURLOPT_POST, TRUE);
-
-          curl_setopt($ch, CURLOPT_POSTFIELDS, $string);
-
-          curl_setopt($ch, CURLOPT_HTTPHEADER, $headerx);
-
-          
-          $response = curl_exec($ch);
-          curl_close($ch);
-          $res = json_decode($response);
-          $name = $res->data->data->name;
-          if($res->status == "true" && isset($name)){
-              $value = [
-                  "status" => true,
-                  'accountName' => $name,
-                  ];
-                  print_r(json_encode($value));
-          }else{
-              $value = [
-                  "status" => false,
-                  'message' => "account does not exist",
-                  ];
-                  print_r(json_encode($value));
-          }
-          
-            }
-      
     }
+
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        $loginData = $this->getData();
+
+        $bankCode = trim($loginData['bank_code'] ?? '');
+        $accountNo = trim($loginData['account'] ?? '');
+
+        if (empty($bankCode) || strlen($bankCode) != 6) {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Enter valid 6-digit bank code',
+            ]);
+            exit;
+        }
+
+        if (empty($accountNo) || strlen($accountNo) != 10) {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Enter valid 10-digit account number',
+            ]);
+            exit;
+        }
+
+        // Prepare JSON payload
+        $payload = json_encode([
+            "beneficiaryAccount" => $accountNo,
+            "bankCode" => $bankCode,
+        ]);
+        $token = $this->hydrogenToken();
+        // Updated cURL block with fixed headers
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => 'https://api.hydrogenpay.com/walletservice/api/v1/FundsTransfer/name-enquiry',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => [
+                'XAppKey: SK_TEST_749d490144105f572938a7ea27aff8b3',
+                'Content-Type: application/json',
+                'Authorization: Bearer '.$token,
+                
+            ],
+        ]);
+
+        $response = curl_exec($curl);
+        curl_close($curl);
+        $res = json_decode($response);
+        echo json_encode(["status"=>true, "beneficiaryName" => $res->data->beneficiaryName]);
+        exit;
+    }
+}
 
     
      public function getLogin($ydata, $urli, $header){
@@ -364,9 +517,455 @@ class Transactions extends Controller
         return $token;
 
     }
+    
+    public function verifyNIN2() {
+         $sentData = $this->getData();
+        $bvnId = $sentData['nin'];
+    $url2 = 'https://api.korapay.com/merchant/api/v1/identities/ng/nin';
+    $url = 'https://sandbox.dojah.io/api/v1/kyc/nin';
+
+    $payload = json_encode([
+        "id" => $bvnId,
+        "verification_consent" => true
+    ]);
+// echo $payload;exit;
+    $headers = [
+        'Content-Type: application/json',
+        'Authorization: Bearer sk_test_pWX6VFsZGttymWaaCrEtxF5NqzNP3ZAujuYaLC1Q'
+    ];
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'POST',
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => $headers,
+    ]);
+
+    $response = curl_exec($curl);
+    $error = curl_error($curl);
+
+    curl_close($curl);
+
+    if ($error) {
+        return (object)[
+            'status' => 'error',
+            'message' => $error
+        ];
+    }
+
+    $decoded = json_decode($response);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return (object)[
+            'status' => 'error',
+            'message' => 'Invalid JSON response',
+            'raw' => $response
+        ];
+    }
+
+    echo $response;
+}
+
+public function verifyNIN() {
+    $sentData = $this->getData();
+    $nin = $sentData['nin'];
+
+    $url = 'https://api.dojah.io/api/v1/kyc/nin?nin=' . urlencode($nin);
+
+    $headers = [
+        'AppId: 684c19f37793ffd7fc7292cf',
+        'Authorization: prod_sk_FkMYag6OzfVGrOEOOSAwjN4mk'
+    ];
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'GET',
+        CURLOPT_HTTPHEADER => $headers,
+    ]);
+
+    $response = curl_exec($curl);
+    $error = curl_error($curl);
+
+    curl_close($curl);
+
+    if ($error) {
+        return (object)[
+            'status' => 'error',
+            'message' => $error
+        ];
+    }
+
+    $decoded = json_decode($response);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return (object)[
+            'status' => 'error',
+            'message' => 'Invalid JSON response',
+            'raw' => $response
+        ];
+    }
+
+    echo $response;
+}
 
     
-      public function implementTransfer()
+    public function verifyBVN2($bvnId) {
+    $url = 'https://api.korapay.com/merchant/api/v1/identities/ng/bvn';
+
+    $payload = json_encode([
+        "id" => $bvnId,
+        "verification_consent" => true
+    ]);
+
+    $headers = [
+        'Content-Type: application/json',
+        'Authorization: Bearer sk_test_pWX6VFsZGttymWaaCrEtxF5NqzNP3ZAujuYaLC1Q'
+    ];
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'POST',
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => $headers,
+    ]);
+
+    $response = curl_exec($curl);
+    $error = curl_error($curl);
+
+    curl_close($curl);
+
+    if ($error) {
+        return (object)[
+            'status' => 'error',
+            'message' => $error
+        ];
+    }
+
+    $decoded = json_decode($response);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return (object)[
+            'status' => 'error',
+            'message' => 'Invalid JSON response',
+            'raw' => $response
+        ];
+    }
+
+    return $decoded;
+}
+
+
+public function verifyBVN($bvnId) {
+    $url = 'https://api.dojah.io/api/v1/kyc/bvn/full?bvn=' . urlencode($bvnId);
+
+    $headers = [
+        'AppId: 6856f7b57349ef8c33b5a6e4',
+        'Authorization: prod_sk_FkMYag6OzfVGrOEOOSAwjN4mk'
+    ];
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'GET',
+        CURLOPT_HTTPHEADER => $headers,
+    ]);
+
+    $response = curl_exec($curl);
+    $error = curl_error($curl);
+
+    curl_close($curl);
+
+    if ($error) {
+        return (object)[
+            'status' => 'error',
+            'message' => $error
+        ];
+    }
+
+    $decoded = json_decode($response);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return (object)[
+            'status' => 'error',
+            'message' => 'Invalid JSON response',
+            'raw' => $response
+        ];
+    }
+
+    return $decoded;
+}
+
+
+ public function validIdentity()
+  {
+     
+    try {
+      $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+      $res = [
+        'status' => 401,
+        'message' =>  $e->getMessage(),
+      ];
+      http_response_code(401);
+      print_r(json_encode($res));
+      exit;
+      } catch(DomainException $e) {
+        $res = [
+          'status' => 401,
+          'message' =>  $e->getMessage(),
+        ];
+        http_response_code(401);
+        print_r(json_encode($res));
+        exit;
+      }
+
+      $sentData = $this->getData();
+    //   echo json_encode($sentData);exit;
+      $data = array(
+     
+          "bvn" => trim($sentData["bvn"]),
+          "email" => $userData->email,
+          "user_id" =>  $userData->user_id
+
+      );
+      
+    //   echo json_encode($data);exit;
+      foreach ($data as $key => $value) {
+          if (is_string($value) && $value === "") {
+              $res = json_encode(array(
+                  "status" => false,
+                  "message" => "Incomplete params: " . $key . " is required."
+              ));
+            http_response_code(404);
+              print_r($res);
+              exit;
+          }
+      }
+
+      if (!filter_var($data["email"], FILTER_VALIDATE_EMAIL)) {
+          http_response_code(404);
+        print_r(json_encode(array(
+            "status" => false,
+            "message" => "Invalid email."
+        )));
+        exit;
+    }
+
+    if(!$this->userModel->findUserByEmail1($data['email'])){
+        http_response_code(404);
+      print_r(json_encode(array(
+        "status" => false,
+        "message" => "User Not registered."
+    )));
+    exit;
+    }
+    $bvnData = $this->verifyBVN($data['bvn']);
+  
+  $user = $this->userModel->getUser($userData->user_id);
+ 
+//   echo json_encode($bvnData);exit;
+//   echo json_encode($user);exit;
+  
+  
+  $fname = strtolower($bvnData->entity->first_name);
+  $lname = strtolower($bvnData->entity->last_name);
+  $mname = strtolower($bvnData->entity->middle_name);
+  
+  $fname2 = strtolower($user->firstName);
+  $lname2 = strtolower($user->lastName);
+  $mname2 = strtolower($user->middleName);
+  
+//   echo $fname;
+//   echo $fname2; 
+  
+  
+  
+  if($fname === $fname2 || $lname === $lname2 || $mname === $mname2)
+  {
+       if ($this->userModel->validAccountBvn($data)) {
+          
+       $res = json_encode(array(
+              'status' => true,
+              'message' => 'BVN validated'
+          ));
+          http_response_code(200);
+          print_r($res);
+          exit;
+       
+
+
+      } else {
+          
+          $res = json_encode(array(
+              'status' => false,
+              'message' => 'validation failed'
+          ));
+          http_response_code(404);
+          print_r($res);
+          exit;
+      }
+  }else{
+        $res = json_encode(array(
+              'status' => false,
+              'message' =>"bvn name dosn't match"
+          ));
+          http_response_code(404);
+          print_r($res);
+          exit;
+  }
+
+     
+
+
+
+  }
+  
+  
+  
+  
+  
+ public function validaccountx()
+  {
+     
+    try {
+      $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+      $res = [
+        'status' => 401,
+        'message' =>  $e->getMessage(),
+      ];
+      http_response_code(401);
+      print_r(json_encode($res));
+      exit;
+      } catch(DomainException $e) {
+        $res = [
+          'status' => 401,
+          'message' =>  $e->getMessage(),
+        ];
+        http_response_code(401);
+        print_r(json_encode($res));
+        exit;
+      }
+
+      $sentData = $this->getData();
+    //   echo json_encode($sentData);exit;
+      $data = array(
+          "nin" => $userData->nin_no,
+          "email" => $userData->email,
+          "user_id" =>  $userData->user_id
+
+      );
+      
+    //   echo json_encode($data);exit;
+      foreach ($data as $key => $value) {
+          if (is_string($value) && $value === "") {
+              $res = json_encode(array(
+                  "status" => false,
+                  "message" => "Incomplete params: " . $key . " is required."
+              ));
+            http_response_code(404);
+              print_r($res);
+              exit;
+          }
+      }
+
+      if (!filter_var($data["email"], FILTER_VALIDATE_EMAIL)) {
+          http_response_code(404);
+        print_r(json_encode(array(
+            "status" => false,
+            "message" => "Invalid email."
+        )));
+        exit;
+    }
+
+    if(!$this->userModel->findUserByEmail1($data['email'])){
+        http_response_code(404);
+      print_r(json_encode(array(
+        "status" => false,
+        "message" => "User Not registered."
+    )));
+    exit;
+    }
+
+
+   $ress2 = $this->createVirtualAcc();
+$ress = json_decode($ress2);
+
+// Defensive check
+if (
+    isset($ress->statusCode, $ress->message, $ress->data) &&
+    $ress->statusCode === "90000" &&
+    strtolower($ress->message) === "success" &&
+    isset($ress->data->account, $ress->data->accountName, $ress->data->bankName)
+) {
+    if ($this->userModel->virtualUpdate($ress->data, $data)) {
+        $res = json_encode([
+            'status' => true,
+            'message' => 'edit profile successful',
+            'data' => $ress->data
+        ]);
+        http_response_code(200);
+        echo $res;
+        exit;
+    } else {
+        $res = json_encode([
+            'status' => false,
+            'message' => 'failed to edit profile'
+        ]);
+        http_response_code(400);
+        echo $res;
+        exit;
+    }
+} else {
+    $response = [
+        'status' => false,
+        'message' => 'virtual account failed',
+        'data' => $ress
+    ];
+    http_response_code(404);
+    echo json_encode($response);
+    exit;
+}
+
+       
+
+
+
+  
+      
+
+
+  }
+  
+    
+      public function implementTransfer2()
 {
   try {
     $userData = $this->RouteProtecion();
@@ -689,6 +1288,192 @@ $formattedAmount = number_format($amount);
 //     print_r($data);
 //     exit;
 // }
+
+
+public function implementTransfer()
+{
+    try {
+        $userData = $this->RouteProtecion();
+    } catch (UnexpectedValueException $e) {
+        echo json_encode([
+            'status' => false,
+            'message' => $e->getMessage()
+        ]);
+        exit;
+    }
+
+    $loginData = $this->getData();
+
+    // Validate input
+    $requiredFields = ['bank_code', 'amount', 'account', 'accountName', 'payfor'];
+    foreach ($requiredFields as $field) {
+        if (empty($loginData[$field])) {
+            echo json_encode([
+                'status' => false,
+                'message' => "Missing field: $field"
+            ]);
+            exit;
+        }
+    }
+
+    if (strlen($loginData['bank_code']) !== 6) {
+        echo json_encode([
+            'status' => false,
+            'message' => 'Invalid bank code length'
+        ]);
+        exit;
+    }
+
+    if (strlen($loginData['account']) !== 10) {
+        echo json_encode([
+            'status' => false,
+            'message' => 'Invalid account number length'
+        ]);
+        exit;
+    }
+
+    if ($loginData['amount'] <= 9) {
+        echo json_encode([
+            'status' => false,
+            'message' => 'Enter a valid amount (greater than ₦9)'
+        ]);
+        exit;
+    }
+
+    // Setup transfer details
+    $amount = (int) $loginData['amount'];
+    // $charges = 50;
+    $totalAmount = $amount ;
+
+    $ref = "payking-" . time() . mt_rand(1000, 9999);
+
+    $token = $this->hydrogenToken();
+
+    $balance = $this->getUserBalance2();
+            if ($balance->savings < $amount ) {
+                $res = (array(
+                    "status_code" => 401,
+                    "status" => false,
+                    "message" => "Insufficient Balance"
+                ));
+
+                $this->handleResponse($res);
+                exit;
+            }
+
+    // Prepare HydrogenPay payload
+    $payload = [
+        "amount" => $amount,
+        "narration" => $loginData['payfor'],
+        "beneficiaryAccount" => $loginData['account'],
+        "beneficiaryName" => $loginData['accountName'],
+        "clientReference" => $ref,
+        "beneficiaryBankCode" => $loginData['bank_code'],
+        "callBack" => "https://webhook-test.com/d62bb766a9c9df7965d7a763e35997e4"
+    ];
+
+    $headers = [
+        "XAppKey: SK_TEST_749d490144105f572938a7ea27aff8b3",
+        "Content-Type: application/json",
+        "Authorization: Bearer ".$token // Replace this dynamically from token function
+    ];
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => "https://api.hydrogenpay.com/walletservice/api/v1/FundsTransfer/initiate-transfer",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_HTTPHEADER => $headers,
+    ]);
+
+    $response = curl_exec($ch);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error) {
+        echo json_encode([
+            'status' => false,
+            'message' => 'cURL Error: ' . $error
+        ]);
+        exit;
+    }
+
+    // $res = json_decode($response);
+    
+    $res = [
+    "statusCode" => 90000,
+    "message" => "Fund transfer was successful",
+    "data" => [
+        "id" => "00000000-0000-0000-0000-000000000000",
+        "amount" => 30000.00000,
+        "transactionId" => "07b86138-c819-4586-b5a0-a5a10869ffdb",
+        "otpNumber" => "07033102077",
+        "debitWalletId" => "f6a7096f-ff7a-4bff-4b95-08dcd88a49bb",
+        "currency" => "NGN",
+        "transactionDate" => "2024-10-02T11:50:16.5419623Z",
+        "transactionStatus" => "Successful",
+        "clientReference" => "NewBANKesmo"
+    ]
+];
+$user = $this->userModel->getUser($userData->user_id);
+   
+
+    if ($res['message'] == "Fund transfer was successful" && $res['statusCode'] === 90000) {
+       
+        $transferData = [
+            "fullname" => $user->fullname,
+            "username" => $userData->uname,
+            "user_id" => $userData->user_id,
+            "email"=> $userData->email,
+            "bank_code" => $loginData['bank_code'],
+            "bank_name" => $loginData['bank_name'],
+            "accname" => $loginData['accountName'],
+            "accountNo" => $loginData['account'],
+            "amount" => $totalAmount,
+            "tr_id" => $ref,
+            "message" => $res['message']
+        ];
+
+        if ($this->transactionModel->withdrawFunds($transferData)) {
+           
+ $formattedAmount = number_format($amount);
+            $title = "Withdrawal Successful 💰";
+            $body =  "Hi {$user->fullname}! Your withdrawal of ₦{$formattedAmount} was successful.";
+               
+            // $this->sendPushToUser($title, $body, $userData->fcmtoken);
+            $data = [
+                'header' => $title,
+                'text' => $body,
+                'user_id' => $transferData['user_id'],
+                'img' => ''
+                ];
+            $this->setNotificationsxx($data);
+            echo json_encode([
+                'status' => true,
+                'message' => 'Transaction successful',
+                'details' => $transferData
+            ]);
+            exit;
+        } else {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Transfer successful, but failed to log transaction'
+            ]);
+            exit;
+        }
+    } else {
+        echo json_encode([
+            'status' => false,
+            'message' => 'Transfer failed',
+            'apiResponse' => $res
+        ]);
+        exit;
+    }
+}
+
+
+
 public function lohinvpay(){
      $password = "Wesson1234$";
         $names = "samueldickson06@gmail.com";
@@ -741,7 +1526,7 @@ curl_close($ch);
 
 public function getBillers($billerName) {
     $url = 'https://api.hydrogenpay.com/sb/resellerservice/api/Biller/reseller-my-billers?ResellerId=2e994141-c7ca-44fa-70b3-08dd6ce0ffd5';
-    echo 'hello';exit;
+    // echo 'hello';exit;
     $token = $this->hydrogenLogin();
 
     $ch = curl_init();
@@ -754,7 +1539,8 @@ public function getBillers($billerName) {
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         CURLOPT_CUSTOMREQUEST => 'GET',
         CURLOPT_HTTPHEADER => [
-            "Authorization: Bearer $token"
+            //  'XAppKey: SK_TEST_749d490144105f572938a7ea27aff8b3',
+            "Authorization: Bearer ".$token
         ],
         CURLOPT_TIMEOUT => 30,  // Timeout to prevent long waits
     ]);
@@ -764,7 +1550,7 @@ public function getBillers($billerName) {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
     $res = json_decode($response);
-echo $token ;exit;
+// echo $response ;exit;
     // Close cURL session
     curl_close($ch);
 
@@ -790,6 +1576,64 @@ echo $token ;exit;
 }
 
 
+public function getElectBillers($billerName) {
+    $token = $this->hydrogenLogin();
+
+    // Build URL with dynamic $billerName
+    $query = http_build_query([
+        'ResellerId' => '2e994141-c7ca-44fa-70b3-08dd6ce0ffd5',
+        'currentpage' => 1,
+        'pageSize' => 100,
+        'Search' => "Electricity",
+        'BillerCategorySystemIds' => '06304920-e368-4a49-90b9-08dc96f03362'
+    ]);
+
+    $url = "https://api.hydrogenpay.com/sb/resellerservice/api/Biller/reseller-my-billers?$query";
+
+    $ch = curl_init();
+
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'GET',
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer $token"
+        ],
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    echo $response;exit;
+    curl_close($ch);
+
+    if ($error) {
+        return ['status' => false, 'message' => "cURL Error: $error"];
+    }
+
+    if ($httpCode !== 200) {
+        return ['status' => false, 'message' => "Request failed with HTTP Code $httpCode", 'response' => json_decode($response, true)];
+    }
+
+    $res = json_decode($response);
+
+    if (!isset($res->data->result) || !is_array($res->data->result)) {
+        return ['status' => false, 'message' => "Invalid API response", 'response' => $res];
+    }
+
+    foreach ($res->data->result as $biller) {
+        if (strcasecmp($biller->billerName, $billerName) === 0) {
+            return $biller->billerSystemId;
+        }
+    }
+
+    return ['status' => false, 'message' => "Biller not found"];
+}
 
 
 public function hydrogenLogin()
@@ -841,6 +1685,7 @@ public function hydrogenLogin()
     // echo json_encode(['status' => true, 'response' => ($res)]);
 }
 public function getCableTvProductCodes($billerSystemId, $token) {
+    $url2= "https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/cabletv/product-codes?BillerSystemId=$billerSystemId";
     $url = "https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/cabletv/{$billerSystemId}/product-codes?page=1";
 
     $headers = [
@@ -848,7 +1693,7 @@ public function getCableTvProductCodes($billerSystemId, $token) {
         "Content-Type: application/json"
     ];
 
-    $response = $this->makeGetRequest($url, $headers);
+    $response = $this->makeGetRequest($url2, $headers);
     return json_decode($response, true);
 }
 public function getCableTvAddonCodes($billerSystemId, $token) {
@@ -867,21 +1712,33 @@ public function getCableTvAddonCodes($billerSystemId, $token) {
 
 public function processCableTvSubscription() {
     
-    //   try {
-    //         $userData = $this->RouteProtecion();
-    //     } catch (UnexpectedValueException $e) {
-    //         $res = [
-    //             'status' => 401,
-    //             'message' => $e->getMessage(),
-    //         ];
-    //         http_response_code(404);
-    //         print_r(json_encode($res));
-    //         exit;
-    //     }
+      try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' => $e->getMessage(),
+            ];
+            http_response_code(404);
+            print_r(json_encode($res));
+            exit;
+        }
     
-    echo "heller";exit;
-
-        // $loginData = $this->getData();
+    // echo "heller";exit;
+$loginData = $this->getData();
+     $serviceID = $jsonData['serviceID'] ?? '';
+        $tkn = $this->hydrogenToken();
+        $amount = $jsonData['amount'] ?? '';
+        $phone = $jsonData['phone'] ?? '';
+        $requestID = $this->generateNineDigitValue();
+        $url = 'https://api.hydrogenpay.com/sb/resellerservice/api/VtuPayment/purchase';
+        $network = strtoupper($this->getPhoneNetworkProvider($phone, $tkn)).' AIRTIME';
+        $biller = $this->getBillers($network);
+        
+        
+        
+        
+        
          $biller = $this->getBillers('GLO');
         $productCode;
         $addonCode;
@@ -933,100 +1790,453 @@ public function purchaseCableTv($payload, $token) {
 }
 
 
-public function createVirtualAcc()
-{
-  
-$url = 'https://qa-api.hydrogenpay.com/bevpay/api/v3/account/virtual-account';
-
-$data = [
-    "accountLabel" => "mike",
-    "nin" => "95694352060",
-    "phoneNumber" => "08012345678",
-    "email" => "test@randomuser.com"
-];
-
-$payload = json_encode($data);
-
-$curl = curl_init();
-
-curl_setopt_array($curl, [
-    CURLOPT_URL => $url,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 30,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'POST',
-    CURLOPT_POSTFIELDS => $payload,
-    CURLOPT_HTTPHEADER => [
-        'Content-Type: application/json',
-        'Cookie: incap_ses_951_2876763=fxqSNPHXxHmI5DVUvqEyDdO+92cAAAAAIyiNY34ymrOmKhzo8xopig==; nlbi_2876763=RN0NE8B0lmAzH9zdLGCS3AAAAAAEfWtnDrpc9P2F4ohLOhDz; visid_incap_2876763=Sk0E+4+dSq2y5Zl5yMkgZgtE7GcAAAAAQUIPAAAAAADmhcmh9TsOwo7j7/pDZIvs'
-    ],
-]);
-
-$response = curl_exec($curl);
-
-if (curl_errno($curl)) {
-    echo 'Curl error: ' . curl_error($curl);
-} else {
-    echo 'Response: ' . $response;
-}
-
-curl_close($curl);
-
-}
 
 
 
-public function hydrogenToken()
-{
-    $url = 'https://api.hydrogenpay.com/walletservice/api/Auth/token';
 
-    $data = json_encode([
-        'username' => 'mail@paykingweb.com',
-        // 'username' => 'hensley@paykingweb.com',
-        'Password' => 'Passw0rd###',
-        // 'Password' => 'V^p7zIRwCU60',
-    ]);
-// Username:
+    public function fetchCryptoTransactions() {
+        
+          try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' => $e->getMessage(),
+            ];
+            http_response_code(404);
+            print_r(json_encode($res));
+            exit;
+        }
 
-// Password:
+    $url = "https://veluxswap.onrender.com/transaction/ad7bfebc-1347-4465-aedc-0c804484e734";
 
-// hensley@paykingweb.com
-
-// V^p7zIRwCU60
-    $ch = curl_init();
-
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $data,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'], // Send data as raw JSON
-        CURLOPT_SSL_VERIFYPEER => true,  // Ensure secure SSL connection
-        CURLOPT_TIMEOUT => 30,           // Prevent long waits
-    ]);
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
     $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-
     curl_close($ch);
 
-    if ($error) {
-        echo json_encode(['status' => false, 'message' => "cURL Error: $error"]);
-    }
-
-    if ($httpCode !== 200) {
-        echo json_encode(['status' => false, 'message' => "Request failed with HTTP Code $httpCode", 'response' => json_decode($response, true)]);
-    }
-
-    $res = json_decode($response);
-    $token = $res->data->token;
-    return $token;
-    // echo json_encode(['status' => true, 'response' => ($res)]);
+    print_r(($response)) ;
 }
+    public function getCryptoRates() {
+        
+  
+    $url = "https://veluxswap.onrender.com/rates";
+
+    $ch = curl_init($url);
+   curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    
+      $data = json_decode($response, true);
+            $fData = array_filter($data, function ($value) {
+                return $value !== null;
+            });
+    $paykingCharge = $this->transactionModel->appsettings();
+    $fData['sellRate'] = $fData['sellRate'] - $paykingCharge;
+    print_r(json_encode($fData)) ;
+}
+
+
+
+    public function fetchCryptotr() {
+        
+          try {
+            $userData = $this->RouteProtecion();
+            } catch (UnexpectedValueException $e) {
+                $res = [
+                    'status' => 401,
+                    'message' => $e->getMessage(),
+                ];
+                http_response_code(404);
+                print_r(json_encode($res));
+                exit;
+            }
+$loginData = $this->getData();
+    $url = "https://veluxswap.onrender.com/transaction/".$loginData['tr_id'];
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+  $data = json_decode($response, true);
+            $fData = array_filter($data['transaction'], function ($value) {
+                return $value !== null;
+            });
+            $paykingCharge = $this->transactionModel->appsettings();
+            
+            $fData['email'] = $userData->email;
+            $fData['user_id'] = $userData->user_id;
+            $fData['payking_rate'] = $fData['rate_at_trade'] - $paykingCharge;
+            $fData['payking_amount_to_pay'] = $fData['payking_rate'] * $fData['amount_in_dollar'];
+            // echo json_encode($fData);exit;
+      if($response)
+            {
+                  $res = (array(
+                    "payment_status" => $fData['status'],
+                    "pay_amount" => $fData['payking_amount_to_pay'],
+                    "payment_id" => $fData['transaction_id'],
+                    "pay_address" => $fData['wallet_address'],
+                    "message" => $fData['message'],
+                    
+                ));
+
+                print_r(json_encode($res));
+                exit;
+            }else{
+                  $res = (array(
+                    "status_code" => 401,
+                    "status" => false,
+                    "message" => "failed to store record"
+                ));
+
+                $this->handleResponse($res);
+                exit;
+            }
+            
+}
+
+private function getHeaders() {
+    $apiKey = VELUXSWAPKEY;
+    return [
+        "x-api-key: $apiKey",
+        "Content-Type: application/json"
+    ];
+}
+
+
+public function createSellTransaction() {
+    
+      try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' => $e->getMessage(),
+            ];
+            http_response_code(404);
+            print_r(json_encode($res));
+            exit;
+        }
+
+    $loginData = $this->getData();
+    $data = [
+    "bank_account" => "3158707407",
+    "bank_name" => "First Bank",
+    "bank_account_name" => "Osaro Godwin",
+    "amount_in_dollar" => $loginData['amount'],
+    "currency" => "usdt"
+];
+   foreach ($data as $key => $value) {
+          if (is_string($value) && $value === "") {
+              $res = json_encode(array(
+                  "status" => false,
+                  "message" => "Incomplete params: " . $key . " is required."
+              ));
+                http_response_code(404);
+              print_r($res);
+              exit;
+          }
+      }
+    
+    $url = "https://veluxswap.onrender.com/transaction/create/sell";
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_POST, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    // echo ($response);
+    
+    // return json_decode($response, true);
+     $data = json_decode($response, true);
+            $fData = array_filter($data['transaction'], function ($value) {
+                return $value !== null;
+            });
+            $paykingCharge = $this->transactionModel->appsettings();
+            
+            $fData['email'] = $userData->email;
+            $fData['user_id'] = $userData->user_id;
+            $fData['payking_rate'] = $fData['rate_at_trade'] - $paykingCharge;
+            $fData['payking_amount_to_pay'] = $fData['payking_rate'] * $fData['amount_in_dollar'];
+            // echo json_encode($fData);exit;
+            
+            if($this->transactionModel->creatPayment($fData))
+            {
+                   $res = (array(
+                    "payment_status" => $fData['status'],
+                    "pay_amount" => $fData['payking_amount_to_pay'],
+                    "payment_id" => $fData['transaction_id'],
+                    "pay_address" => $fData['wallet_address'],
+                    "amount_in_dollar" => $loginData['amount']
+                    
+                ));
+
+                print_r(json_encode($res));
+                exit;
+            }else{
+                  $res = (array(
+                    "status_code" => 401,
+                    "status" => false,
+                    "message" => "failed to store record"
+                ));
+
+                $this->handleResponse($res);
+                exit;
+            }
+            
+           
+
+}
+
+public function fetchGiftcardTransactions() {
+      try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' => $e->getMessage(),
+            ];
+            http_response_code(404);
+            print_r(json_encode($res));
+            exit;
+        }
+
+    $url = "https://veluxswap.onrender.com/giftcard";
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    echo ($response);
+}
+public function fetchGiftcardtr() {
+      try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' => $e->getMessage(),
+            ];
+            http_response_code(404);
+            print_r(json_encode($res));
+            exit;
+        }
+        
+        $loginData = $this->getData();
+
+    $url = "https://veluxswap.onrender.com/giftcard/".$loginData['tr_id'];
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    // echo ($response);
+    
+     $data = json_decode($response, true);
+            $fData = array_filter($data['transaction'], function ($value) {
+                return $value !== null;
+            });
+            $paykingCharge = $this->transactionModel->appsettings();
+            
+            $fData['email'] = $userData->email;
+            $fData['user_id'] = $userData->user_id;
+            $fData['payking_rate'] = $fData['rate_at_trade'] - $paykingCharge;
+            $fData['payking_amount_to_pay'] = $fData['payking_rate'] * $fData['amount_in_dollar'];
+            // echo json_encode($fData);exit;
+      if($response)
+            {
+                  $res = (array(
+                    "payment_status" => $fData['status'],
+                    "pay_amount" => $fData['payking_amount_to_pay'],
+                    "payment_id" => $fData['transaction_id'],
+                    "type" => $fData['type'],
+                    "message" => $fData['message'],
+                    
+                ));
+
+                print_r(json_encode($res));
+                exit;
+            }else{
+                  $res = (array(
+                    "status_code" => 401,
+                    "status" => false,
+                    "message" => "failed to store record"
+                ));
+
+                $this->handleResponse($res);
+                exit;
+            }
+}
+
+public function createGiftcardTransaction() {
+      try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' => $e->getMessage(),
+            ];
+            http_response_code(404);
+            print_r(json_encode($res));
+            exit;
+        }
+$loginData = $this->getData();
+    $url = "https://veluxswap.onrender.com/giftcard";
+    $data = [
+    "bank_account" => "0123456789",
+    "bank_name" => "Bank Name",
+    "bank_account_name" => "Account Name",
+    "amount_in_dollar" => $loginData['amount'],
+    "cardType" => $loginData['type'],
+    "image_1_url" => $_FILES['image_1_url'],
+    "image_2_url" => $_FILES['image_2_url']
+];
+
+    foreach ($data as $key => $value) {
+          if (is_string($value) && $value === "") {
+              $res = json_encode(array(
+                  "status" => false,
+                  "message" => "Incomplete params: " . $key . " is required."
+              ));
+                http_response_code(404);
+              print_r($res);
+              exit;
+          }
+    }
+
+      $new_image_names = [];
+
+      $extensions = ["jpeg", "png", "jpg"];
+      $types = ["image/jpeg", "image/jpg", "image/png"];
+
+      $image_fields = ['image_1_url', 'image_2_url'];
+
+      foreach ($image_fields as $image_field) {
+          if (isset($data[$image_field])) {
+              $img_name = $data[$image_field]['name'];
+              $img_type = $data[$image_field]['type'];
+              $tmp_name = $data[$image_field]['tmp_name'];
+              $img_explode = explode('.', $img_name);
+              $img_ext = end($img_explode);
+
+              if (in_array($img_ext, $extensions) === true) {
+                  if (in_array($img_type, $types) === true) {
+                      $time = time();
+                      $new_img_name = $time . "_" . $img_name;
+                      if (move_uploaded_file($tmp_name,  "assets/img/attachment/" . $new_img_name)) {
+                          $new_image_names[$image_field] = (string)(URLROOT . "/assets/img/attachment/" . $new_img_name); 
+                      } else {
+                          $response = array(
+                              'status' => 'false',
+                              'message' => "Upload failed for $image_field",
+                          );
+                          http_response_code(404);
+                          print_r(json_encode($response));
+                          exit;
+                      }
+                  } else {
+                      $response = array(
+                          'status' => 'false',
+                          'message' => "Invalid file type for $image_field. Allowed types are: " . implode(', ', $types),
+                      );
+                      http_response_code(404);
+                      print_r(json_encode($response));
+                      exit;
+                  }
+              } else {
+                  $response = array(
+                      'status' => 'false',
+                      'message' => "Invalid file extension for $image_field. Allowed extensions are: " . implode(', ', $extensions),
+                  );
+                  http_response_code(404);
+                  print_r(json_encode($response));
+                  exit;
+              }
+          } else {
+              $response = array(
+                  'status' => 'false',
+                  'message' => "$image_field not set",
+              );
+              http_response_code(404);
+              print_r(json_encode($response));
+              exit;
+          }
+      }
+
+      foreach ($new_image_names as $key => $value) {
+          $data[$key] = $value;
+      }
+      
+      
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_POST, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    // echo ($response);
+    
+      $data = json_decode($response, true);
+            $fData = array_filter($data['gift'], function ($value) {
+                return $value !== null;
+            });
+            $paykingCharge = $this->transactionModel->appsettings();
+            
+            $fData['email'] = $userData->email;
+            $fData['user_id'] = $userData->user_id;
+            $fData['payking_rate'] = $fData['rate_at_trade'] - $paykingCharge;
+            $fData['payking_amount_to_pay'] = $fData['payking_rate'] * $fData['amount_in_dollar'];
+            // echo json_encode($fData);exit;
+            
+              if($this->transactionModel->creatPayment2($fData))
+            {
+                   $res = (array(
+                    "payment_status" => $fData['status'],
+                    "pay_amount" => $fData['payking_amount_to_pay'],
+                    "payment_id" => $fData['transaction_id'],
+                    // "pay_address" => $fData['wallet_address'],
+                    "type" => $fData['type'],
+                    // "pay_address" => $fData['wallet_address'],
+                    
+                ));
+
+                print_r(json_encode($res));
+                exit;
+            }else{
+                  $res = (array(
+                    "status_code" => 401,
+                    "status" => false,
+                    "message" => "failed to store record"
+                ));
+
+                $this->handleResponse($res);
+                exit;
+            }
+            
+            
+}
+
 
 public function cardDeposite()
 {
@@ -1056,7 +2266,7 @@ public function cardDeposite()
         'callback' => 'https://hydrogenpay.com',
     ]);
     // echo $data;exit;
-$token = "SK_TEST_dbaf81c33d3422b3a88d0e2c3ae55998576efbddbb27adca898b89dd772b2f46b65c64ce89784486df88631383d5f2acdfdaf5976f19d80cdc20d64c484beb40";
+$token = "SK_TEST_749d490144105f572938a7ea27aff8b3";
 
 $curl = curl_init();
 
@@ -1095,12 +2305,12 @@ public function hydrogenToken_x()
     // $data = ([
     //     'username' => 'mail@paykingweb.com',
     //     // 'username' => 'hensley@paykingweb.com',
-    //     'Password' => 'Passw0rd###',
+    //     'Password' => 'Passw0rd###ggg',
     //     // 'Password' => 'V^p7zIRwCU60',
     // ]);
 $loginPayload = json_encode([
-    "username" => "mail@paykingweb.com",
-    "password" => "Passw0rd###"
+    "username" => "hensley@paykingweb.com",
+    "password" => "Hug@6411#"
 ]);
 
 $curl = curl_init();
@@ -1210,28 +2420,28 @@ public function hydrogenLogin_x()
 
         $tagname = $loginData['username'];
         $amount = $loginData['amount'];
-        $key = $loginData['secret_key'];
-         if(password_verify($key, $userData->security_key)){
+        // $key = $loginData['secret_key'];
+        //  if(password_verify($key, $userData->security_key)){
              
-             if($userData->used_key >= 1){
-                  $response = [
-                'status' => false,
-                'message' => "key already used",
-            ];
-            http_response_code(404);
-            print_r(json_encode($response));
-            exit;
-             }
-            $this->userModel->security_use($userData->user_id, $userData->email);
-        }else{
-             $response = [
-                'status' => false,
-                'message' => "can't go through this point",
-            ];
-            http_response_code(404);
-            print_r(json_encode($response));
-            exit;
-        }
+        //      if($userData->used_key >= 1){
+        //           $response = [
+        //         'status' => false,
+        //         'message' => "key already used",
+        //     ];
+        //     http_response_code(404);
+        //     print_r(json_encode($response));
+        //     exit;
+        //      }
+        //     $this->userModel->security_use($userData->user_id, $userData->email);
+        // }else{
+        //      $response = [
+        //         'status' => false,
+        //         'message' => "can't go through this point",
+        //     ];
+        //     http_response_code(404);
+        //     print_r(json_encode($response));
+        //     exit;
+        // }
         
 
         if (empty($tagname)) {
@@ -1296,7 +2506,7 @@ public function hydrogenLogin_x()
          
             // Define notification messages
             // Format the amount with commas based on its length
-            // $formattedAmount = number_format($amount);
+            $formattedAmount = number_format($amount);
             // Construct the payment sent message
             $title1 = "Payment Sent 🚀";
             $body1 = "Hi " . $userData->uname . "! You've successfully sent ₦" . $formattedAmount . " to " . $tagname;
@@ -1562,7 +2772,146 @@ public function hydrogenLogin_x()
     }
     
     
-    public function ticketTransfer()
+    
+   public function ticketTransfer()
+{
+    try {
+        $userData = $this->RouteProtecion(); // Logged-in user
+    } catch (UnexpectedValueException $e) {
+        http_response_code(401);
+        echo json_encode(['status' => 401, 'message' => $e->getMessage()]);
+        exit;
+    }
+
+    $loginData = $this->getData();
+
+    if (
+        !isset($loginData['event_id']) ||
+        !isset($loginData['amount']) ||
+        !isset($loginData['recipient_ids']) ||
+        !is_array($loginData['recipient_ids'])
+    ) {
+        http_response_code(400);
+        echo json_encode(['status' => false, 'message' => 'event_id, amount, and recipient_ids are required']);
+        exit;
+    }
+
+    $eventId = $loginData['event_id'];
+    $amount = (int)$loginData['amount'];
+    $recipientIds = $loginData['recipient_ids'];
+
+    if (empty($eventId)) {
+        http_response_code(400);
+        echo json_encode(['status' => false, 'message' => 'event_id is required']);
+        exit;
+    }
+
+    if ($amount < 10) {
+        http_response_code(400);
+        echo json_encode(['status' => false, 'message' => 'Minimum amount is ₦10']);
+        exit;
+    }
+
+    if (count($recipientIds) < 1 || count($recipientIds) > 5) {
+        http_response_code(400);
+        echo json_encode(['status' => false, 'message' => 'You can send to between 1 and 5 users']);
+        exit;
+    }
+
+    // Check event existence
+    $event = $this->transactionModel->findEventById($eventId);
+    if (!$event) {
+        http_response_code(404);
+        echo json_encode(['status' => 404, 'message' => "No event found with ID $eventId"]);
+        exit;
+    }
+
+    $totalAmount = $amount * count($recipientIds);
+    $senderEmail = $userData->email;
+    $senderId = $userData->user_id;
+    $senderTag = $userData->uname;
+    $senderDetails = $this->userModel->findUserByEmail_det2($senderEmail);
+
+    if (!$this->transactionModel->checkAccount($senderEmail, $senderId, $totalAmount)) {
+        $formatted = number_format($totalAmount);
+        $this->setNotificationsxx([
+            'header' => 'Payment Failed ❌',
+            'text' => "Hi $senderTag! Your payment of ₦$formatted failed due to insufficient funds.",
+            'user_id' => $senderId,
+            'img' => ''
+        ]);
+        http_response_code(402);
+        echo json_encode(['status' => false, 'message' => 'Insufficient funds']);
+        exit;
+    }
+
+    $success = [];
+    $failed = [];
+
+    foreach ($recipientIds as $recipientId) {
+        $recipient = $this->transactionModel->findUserById($recipientId);
+        if (!$recipient) {
+            $failed[] = $recipientId;
+            continue;
+        }
+
+        $tr_id = 'VTRIP' . md5(date('ymdihs') . rand(900, 3000));
+
+        $datax = [
+            's_tag' => $senderTag,
+            's_name' => $senderDetails->fullname,
+            'r_tag' => $recipient->uname,
+            's_id' => $senderId,
+            'r_id' => $recipient->user_id,
+            'r_name' => $recipient->fullname,
+            'tr_status' => 'successful',
+            'tr_id' => $tr_id,
+            'amount' => $amount,
+            's_e' => $senderEmail,
+            'r_e' => $recipient->email,
+            'campaign_id' => $eventId
+        ];
+
+        if ($this->transactionModel->ticketTransfer($datax)) {
+            $this->transactionModel->ticketUpdate($datax);
+
+            $formattedAmount = number_format($amount);
+
+            $this->setNotificationsxx([
+                'header' => 'Ticket Paid 🚀',
+                'text' => "Hi $senderTag! You paid ₦$formattedAmount for a ticket for {$recipient->uname}",
+                'user_id' => $senderId,
+                'img' => ''
+            ]);
+
+            $this->setNotificationsxx([
+                'header' => 'Ticket Received 🎟',
+                'text' => "Hi {$recipient->uname}, $senderTag paid for your ticket to $eventId 🎉",
+                'user_id' => $recipient->user_id,
+                'img' => ''
+            ]);
+
+            $success[] = $recipient->uname;
+        } else {
+            $failed[] = $recipient->uname;
+        }
+    }
+
+    echo json_encode([
+        'status' => 200,
+        'message' => 'Ticket transactions processed',
+        'event_id' => $eventId,
+        'successful' => $success,
+        'failed' => $failed
+    ]);
+}
+
+
+    
+    
+    
+    
+    public function ticketTransferSelf()
     {
         try {
             $userData = $this->RouteProtecion();
@@ -1677,7 +3026,7 @@ public function hydrogenLogin_x()
          
             // Define notification messages
             // Format the amount with commas based on its length
-            // $formattedAmount = number_format($amount);
+            $formattedAmount = number_format($amount);
             // Construct the payment sent message
             $title1 = "Payment Sent 🚀";
             $body1 = "Hi " . $userData->uname . "! You've successfully sent ₦" . $formattedAmount . " to " . $r_userDatax->uname;
@@ -1713,8 +3062,8 @@ public function hydrogenLogin_x()
                 $res = [
                     'status' => 200,
                     'message' => 'Transaction successful',
-                    'sender' =>  $userDatax->fullname,
-                    'receiver' =>  $r_userDatax->fullname,
+                    'sender' =>  $userDatax->uname,
+                    'receiver' =>  $r_userDatax->uname,
                     'receiver_tag' => $tagname,
                     'amount' => $amount,
                 ];
@@ -1752,6 +3101,13 @@ public function hydrogenLogin_x()
             // $this->sendPushToUser($title1, $body, $userData->fcmtoken);
         }
     }
+
+
+
+        
+
+
+
     
         public function getElectricity()
     {
@@ -1972,7 +3328,7 @@ public function hydrogenLogin_x()
     public function saveMtn()
     {
          $url = "https://api.hydrogenpay.com/sb/resellerservice/api/Bouquet";
-        $token = $this->hydrogenLogin();
+        $token = $this->hydrogenToken();
         $res = $this->makeGetRequestJWT($url, $token);
         
         // echo $res;
@@ -2031,9 +3387,9 @@ public function hydrogenLogin_x()
     public function saveGlo()
     {
         $url = "https://api.hydrogenpay.com/sb/resellerservice/api/Bouquet";
-        $token = $this->hydrogenLogin();
+        $token = $this->hydrogenToken();
         $res = $this->makeGetRequestJWT($url, $token);
-        
+        // echo $res; exit;
         // echo $res;
        $data = json_decode($res, true);
 
@@ -2083,7 +3439,7 @@ public function hydrogenLogin_x()
     {
   
         $url = "https://api.hydrogenpay.com/sb/resellerservice/api/Bouquet";
-        $token = $this->hydrogenLogin();
+        $token = $this->hydrogenToken();
         $res = $this->makeGetRequestJWT($url, $token);
         
         // echo $res;
@@ -2135,7 +3491,7 @@ public function hydrogenLogin_x()
     public function saveEti()
     {
         $url = "https://api.hydrogenpay.com/sb/resellerservice/api/Bouquet";
-        $token = $this->hydrogenLogin();
+        $token = $this->hydrogenToken();
         $res = $this->makeGetRequestJWT($url, $token);
         
         // echo $res;
@@ -2389,15 +3745,15 @@ public function hydrogenLogin_x()
     curl_close($ch);
 
     if ($error) {
-        return ['status' => false, 'message' => "cURL Error: $error"];
+        return json_encode(['status' => false, 'message' => "cURL Error: $error"]);
     }
 
     if ($httpCode !== 200) {
-        return ['status' => false, 'message' => "Request failed with HTTP Code $httpCode", 'response' => json_decode($response, true)];
+        return json_encode(['status' => false, 'message' => "Request failed with HTTP Code $httpCode", 'response' => json_decode($response, true)]);
     }
     $res = json_decode($response, true);
 
-    return ($res['data']['defaultNetwork']) ;
+    echo ($response);exit;
     
     
 }
@@ -2454,14 +3810,14 @@ public function hydrogenLogin_x()
             exit;
         }
         $serviceID = $jsonData['serviceID'] ?? '';
-        $tkn = $this->hydrogenLogin();
+        $tkn = $this->hydrogenToken();
         $amount = $jsonData['amount'] ?? '';
         $phone = $jsonData['phone'] ?? '';
         $requestID = $this->generateNineDigitValue();
         $url = 'https://api.hydrogenpay.com/sb/resellerservice/api/VtuPayment/purchase';
         $network = strtoupper($this->getPhoneNetworkProvider($phone, $tkn)).' AIRTIME';
         $biller = $this->getBillers($network);
-        // print_r($biller) ;exit;
+        // print_r($network) ;exit;
             $data = [
                 // "resellerId" => "2e994141-c7ca-44fa-70b3-08dd6ce0ffd5",
                 "billerSystemId" => $biller,
@@ -2486,6 +3842,7 @@ public function hydrogenLogin_x()
                 exit;
             }
         }
+        
             if ($balance->savings < $data['amount'] ) {
                 $res = (array(
                     "status_code" => 401,
@@ -2684,30 +4041,30 @@ public function hydrogenLogin_x()
         $balance = $this->getUserBalance2();
 
         $jsonData = $this->getData();
-         $key = $jsonData['secret_key'];
-         if(password_verify($key, $userData->security_key)){
+        //  $key = $jsonData['secret_key'];
+        //  if(password_verify($key, $userData->security_key)){
              
-             if($userData->used_key >= 1){
-                  $response = [
-                'status' => false,
-                'message' => "key already used",
-            ];
-            http_response_code(404);
-            print_r(json_encode($response));
-            exit;
-             }
-            $this->userModel->security_use($userData->user_id, $userData->email);
-        }else{
-             $response = [
-                'status' => false,
-                'message' => "can't go through this point",
-            ];
-            http_response_code(404);
-            print_r(json_encode($response));
-            exit;
-        }
+        //      if($userData->used_key >= 1){
+        //           $response = [
+        //         'status' => false,
+        //         'message' => "key already used",
+        //     ];
+        //     http_response_code(404);
+        //     print_r(json_encode($response));
+        //     exit;
+        //      }
+        //     $this->userModel->security_use($userData->user_id, $userData->email);
+        // }else{
+        //      $response = [
+        //         'status' => false,
+        //         'message' => "can't go through this point",
+        //     ];
+        //     http_response_code(404);
+        //     print_r(json_encode($response));
+        //     exit;
+        // }
          $serviceID = $jsonData['serviceID'] ?? '';
-        $tkn = $this->hydrogenLogin();
+        $tkn = $this->hydrogenToken();
         $amount = $jsonData['amount'] ?? '';
         $bouquetCode = $jsonData['bouquetCode'] ?? '';
         $phone = $jsonData['phone'] ?? '';
@@ -2751,7 +4108,7 @@ public function hydrogenLogin_x()
             }
 
             $response =  $this->makePostReques992($url, $data, $tkn);
-            echo ($response); exit;
+            // echo ($response); exit;
             //  $responsex = [
             //     "code" => 200,
             //     "status" => "successful",
@@ -2846,7 +4203,7 @@ public function hydrogenLogin_x()
             print_r($response);
             exit;
     }
-        public function buyCableTv()
+        public function electricityBill()
 {
     try {
         // Ensure user authentication
@@ -2900,13 +4257,15 @@ public function hydrogenLogin_x()
         $phone = $jsonData['phone'] ?? '';
         $requestID = $this->generateNineDigitValue();
         $url = 'https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/electricity/purchase';
-        $network = strtoupper($this->getPhoneNetworkProvider($phone, $tkn)).' DATA';
-        $biller = $this->getBillers($network);
+        // $network = strtoupper($this->getPhoneNetworkProvider($phone, $tkn)).' DATA';
+        // $biller = $this->getElectBillers($network);
+        $biller = $jsonData['billerID'];
         $accNo = $jsonData['meterNo'] ?? '';
+
       $data = [
                 // "resellerId" => "2e994141-c7ca-44fa-70b3-08dd6ce0ffd5",
-                "billerSystemId" => "e22168f0-7e0f-4b68-5399-08dc651c6771",
-                // "billerSystemId" => $biller,
+                // "billerSystemId" => "e22168f0-7e0f-4b68-5399-08dc651c6771",
+                "billerSystemId" => $biller,
                 "amount" => $amount,
                 "phoneNumber" => $phone,
                 "accountNumber" => $accNo,
@@ -2938,51 +4297,75 @@ public function hydrogenLogin_x()
             }
 
             $response =  $this->makePostReques992($url, $data, $tkn);
-            echo ($response); exit;
-    // $responsex = [
-    //     "code" => 200,
-    //     "status" => "TRANSACTION_SUCCESSFUL",
-    //     "description" => "TRANSACTION_SUCCESSFUL",
-    //     "content" => [
-    //         "transactionID" => 3574357094,
-    //         "requestID" => "",
-    //         "amount" => "1100",
-    //         "phone" => "08140558898",
-    //         "serviceID" => "kaduna_electric",
-    //         "amountPaid" => 1100,
-    //         "initialBalance" => "1280",
-    //         "finalBalance" => 180,
-    //         "image" => "//gsubz.com/uploads/service/1867790347.png",
-    //         "fee" => "0",
-    //         "serviceName" => "Kaduna Electricity",
-    //         "status" => "TRANSACTION_SUCCESSFUL",
-    //         "code" => 200,
-    //         "description" => "TRANSACTION_SUCCESSFUL",
-    //         "date" => "2022-05-03T03:00:59+01:00",
-    //         "diplayValue" => null
-    //     ],
-    //     "gateway" => [
-    //         "referrer" => ""
-    //     ]
-    // ];
-    
-    $resx = json_encode($responsex);
-            $res = json_decode($resx);
+            
+//             {
+//     "statusCode": 90000,
+//     "message": "Electricity bill payment was successful",
+//     "data": {
+//         "transactionRef": "830920449",
+//         "transactionStatus": "SUCCESSFUL",
+//         "data": {
+//             "statusCode": "0",
+//             "transactionStatus": "success",
+//             "transactionReference": "830920449",
+//             "transactionMessage": "Topup successful on 39745754943094",
+//             "provider_message": "Topup successful on 39745754943094",
+//             "tokenCode": "65547325743738458534",
+//             "tokenAmount": 0,
+//             "amountOfPower": "2.959400620349201 Kwh",
+//             "rawOutput": {
+//                 "token": "65547325743738458534",
+//                 "resetToken": "",
+//                 "configureToken": null,
+//                 "tokenAmount": 0,
+//                 "amountOfPower": "2.959400620349201 Kwh",
+//                 "status": "ACCEPTED",
+//                 "freeUnits": "0",
+//                 "taxAmount": null,
+//                 "debtAmount": null,
+//                 "totalAmount": "0.0",
+//                 "responseCode": "200",
+//                 "receiptNumber": "AGWqmb5MwqaZtRZBP1Htjb",
+//                 "generatedAmount": "0.0",
+//                 "responseMessage": "successful",
+//                 "discoExchangeReference": "AGWqmb5MwqaZtRZBP1Htjb",
+//                 "vendAmount": "0.0",
+//                 "accountBalance": null,
+//                 "meterNumber": "12345678911",
+//                 "account": "6516853173",
+//                 "tariff": "",
+//                 "customerName": "testadmin",
+//                 "customerPhone": "",
+//                 "customerBusinessUnit": "",
+//                 "arrearspaid": "0.0",
+//                 "rate": "2.959400620349201",
+//                 "tenderedAmount": 200,
+//                 "mapRefundAmt": 3,
+//                 "mapRefundBal": 8681,
+//                 "mapRefundUnit": 0.05000000074505806,
+//                 "mapRefundTxnRef": "BEDCTEST000024-MAPREF"
+//             }
+//         }
+//     }
+// }
+
+    // $resx = json_encode($responsex);
+            $res = json_decode($response);
 
     // Process the response
-    if (isset($res->code) && $res->code === 200 && $res->status === "TRANSACTION_SUCCESSFUL") {
+    if (isset($res->statusCode) && $res->statusCode === 90000 && $res->message === "Electricity bill payment was successful") {
         $saveData = [
             'user_id' => $userData->user_id,
             'email' => $userData->email,
-            'tr_id' => $res->content->transactionID,
-            'amount' => $res->content->amount,
+            'tr_id' => $res->data->transactionRef,
+            'amount' => $amount,
             'tr_type' => 'Electricity',
-            'phone' => $res->content->phone,
-            'serviceID' => $res->content->serviceID,
-            'date' => $res->content->date,
-            'response' => $res->content->serviceName
+            'phone' => $phone,
+            'serviceID' => $res->data->data->tokenCode,
+            'date' => date('y-m-d:h-i-s'),
+            'response' => $res->data->data->transactionMessage
         ];
-
+// echo json_encode($saveData); exit;
         // Save transaction to database
         if ($this->transactionModel->saveTransactionx($saveData)) {
             unset($saveData->response); // Exclude sensitive data from the response
@@ -3174,6 +4557,37 @@ public function verifyPayment()
      
        
     }
+    public function getProductCode($billerSystemId, $tkn)
+    {
+        // echo json_encode($billerSystemId);
+          $url2= "https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/cabletv/product-codes?BillerSystemId=".($billerSystemId)."&pageSize=20";
+        $url = "https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/cabletv/{$billerSystemId}/product-codes?page=1";
+        $token = $this->hydrogenLogin();
+        $ch = curl_init();
+            
+            // Set cURL options for GET request
+            curl_setopt($ch, CURLOPT_URL, $url2);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer '.$token, // Replace with your actual token
+                'Content-Type: application/json',
+            ]);
+            
+            // Execute request and get response
+            $response = curl_exec($ch);
+            echo $response;exit;
+            // Check for errors
+            if (curl_errno($ch)) {
+                echo 'Curl error: ' . curl_error($ch);
+            } else {
+                // Decode JSON response
+                $data = json_decode($response, true);
+                return $response;
+            }
+            
+            // Close cURL
+            curl_close($ch);
+    }
 
        public function loginNowP()
     {
@@ -3182,7 +4596,7 @@ public function verifyPayment()
         print_r($res);
     }
     
-        public function electricityBill()
+        public function cableTv22()
 {
     try {
         // Ensure user authentication
@@ -3207,45 +4621,60 @@ public function verifyPayment()
 
     // Extract and validate JSON payload
     $jsonData = $this->getData();
-       $key = $jsonData['secret_key'];
-        if(password_verify($key, $userData->security_key)){
+    //   $key = $jsonData['secret_key'];
+    //     if(password_verify($key, $userData->security_key)){
              
-             if($userData->used_key >= 1){
-                  $response = [
-                'status' => false,
-                'message' => "key already used",
-            ];
-            http_response_code(404);
-            print_r(json_encode($response));
-            exit;
-             }
-            $this->userModel->security_use($userData->user_id, $userData->email);
-        }else{
-             $response = [
-                'status' => false,
-                'message' => "can't go through this point",
-            ];
-            http_response_code(404);
-            print_r(json_encode($response));
-            exit;
-        }
-    $serviceID = $jsonData['serviceID'] ?? '';
-    $api = APIKEY;
-    $amount = $jsonData['amount'] ?? '';
-    $phone = $jsonData['phone'] ?? '';
-    $customerID = $jsonData['customerID'] ?? '';
-    $url = 'https://gsubz.com/api/pay/';
+    //          if($userData->used_key >= 1){
+    //               $response = [
+    //             'status' => false,
+    //             'message' => "key already used",
+    //         ];
+    //         http_response_code(404);
+    //         print_r(json_encode($response));
+    //         exit;
+    //          }
+    //         $this->userModel->security_use($userData->user_id, $userData->email);
+    //     }else{
+    //          $response = [
+    //             'status' => false,
+    //             'message' => "can't go through this point",
+    //         ];
+    //         http_response_code(404);
+    //         print_r(json_encode($response));
+    //         exit;
+    //     }
+    // $serviceID = $jsonData['serviceID'] ?? '';
+    $api = $this->hydrogenLogin();
+    // $amount = $jsonData['amount'] ?? '';
+    // $phone = $jsonData['phone'] ?? '';
+    // $customerID = $jsonData['customerID'] ?? '';
+    // $url = 'https://gsubz.com/api/pay/';
+    
+     $serviceID = $jsonData['serviceID'] ?? '';
+        $tkn = $this->hydrogenLogin();
+        $amount = $jsonData['amount'] ?? '';
+        $cardNo = $jsonData['card_no'] ?? '';
+        $type = $jsonData['type'] ?? '';
+        $phone = $jsonData['phone'] ?? '';
+        $requestID = $this->generateNineDigitValue();
+        $url = 'https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/cabletv/purchase';
+        $network = $type.' Subscription on Multichoice Network';
+        $biller = $this->getBillers($network);
+        // $biller = "";
+        $productCode = $jsonData['value'];
 
-    $data = [
-        'serviceID' => $serviceID,
-        'api' => $api,
-        'amount' => $amount,
-        'phone' => $phone,
-        'customerID' => $customerID,
+ $payload = [
+        "billerSystemId" => $biller,
+        "smartCardNumber" => $cardNo,
+        "totalAmount" => $amount,
+        "productCode" => $productCode,
+        // "addonCode" => $addonCode,
+        "productMonthsPaidFor" => $jsonData['duration'],
+        "clientReference" => $this->generateNineDigitValue()
     ];
-
+// print_r(json_encode($payload));exit;
     // Validate input data
-    foreach ($data as $key => $value) {
+    foreach ($payload as $key => $value) {
         if (is_string($value) && trim($value) === '') {
             $res = [
                 "status_code" => 400,
@@ -3258,7 +4687,9 @@ public function verifyPayment()
     }
 
     // Perform the cURL request
-    $responsex = $this->makePostRequest2($url, $data);
+    $responsex = $this->makePostRequest2($url, $payload, $api);
+    
+    echo $responsex;exit;
     // $responsex = [
     //     "code" => 200,
     //     "status" => "TRANSACTION_SUCCESSFUL",
@@ -3334,6 +4765,153 @@ public function verifyPayment()
     }
 }
 
+public function cableTv()
+{
+    try {
+        $userData = $this->RouteProtecion();
+    } catch (UnexpectedValueException | DomainException $e) {
+        http_response_code(401);
+        print_r(json_encode([
+            'status' => 401,
+            'message' => $e->getMessage()
+        ]));
+        exit;
+    }
+
+    $jsonData = $this->getData();
+
+    $tkn = $this->hydrogenLogin();
+    $amount = $jsonData['amount'] ?? '';
+    $cardNo = $jsonData['card_no'] ?? '';
+    $type = $jsonData['type'] ?? '';
+    $phone = $jsonData['phone'] ?? '';
+    $addonCode = $jsonData['addon_code'] ?? ["string"]; // should be an array
+    $duration = $jsonData['duration'] ?? 1;
+    $requestID = $this->generateNineDigitValue();
+    $url = 'https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/cabletv/purchase';
+
+    $network = $type . ' Subscription on Multichoice Network';
+    $biller = $this->getBillers($network);
+    $productCode = $jsonData['value'];
+    $responseJson = $this->purchaseCableTV2($tkn, $biller, $cardNo, $amount, $productCode, $addonCode, $duration, $phone, $requestID);
+    
+    // echo $responseJson ; exit;
+    
+    $response = json_decode($responseJson);
+    
+//     {
+//   "statusCode": 90000,
+//   "message": "Operation Successful",
+//   "description": "CableTv purchase was successful",
+//   "data": {
+//     "referenceId": "11a02b2b-c8f4-4032-bfee-a3296d843760",
+//     "transactionStatus": "success"
+//   },
+//   "transactionStatus": "Cable TV Subscription successful",
+//   "transactionRef": "11a02b2b-c8f4-4032-bfee-a3296d843760"
+// }
+    
+    if (isset($response->statusCode) && $response->statusCode === 90000 && $response->message === "Operation Successful") {
+        $saveData = [
+            'user_id' => $userData->user_id,
+            'email' => $userData->email,
+            'tr_id' => $response->data->transactionRef,
+            'amount' => $amount,
+            'tr_type' => 'CableTV',
+            'phone' => $phone,
+            'serviceID' => "",
+            'date' => date('y-m-d:h-i-s'),
+            'response' => $response->description
+        ];
+
+        if ($this->transactionModel->saveTransactionx($saveData)) {
+            unset($saveData['response']); // don't return internal note
+            $this->handleResponseWithData([
+                "status_code" => 200,
+                "status" => true,
+                "message" => $response->description,
+                // "data" => $saveData
+            ]);
+            exit;
+        } else {
+            $this->handleResponse([
+                "status_code" => 500,
+                "status" => false,
+                "message" => "Failed to save transaction."
+            ]);
+            exit;
+        }
+    } else {
+        $this->handleResponse([
+            "status_code" => 400,
+            "status" => false,
+            "message" => $response->description ?? "Transaction failed."
+        ]);
+        exit;
+    }
+}
+
+public function purchaseCableTV2($token, $billerSystemId, $smartCardNumber, $totalAmount, $productCode, $addonCodes, $monthsPaid, $phoneNumber, $clientReference) {
+    $url = 'https://api.hydrogenpay.com/sb/resellerservice/api/BillPayment/cabletv/purchase';
+
+    $payload = json_encode([
+        "billerSystemId" => $billerSystemId,
+        "smartCardNumber" => $smartCardNumber,
+        "totalAmount" => $totalAmount,
+        "productCode" => $productCode,
+        "addonCode" => $addonCodes, // should be an array
+        "productMonthsPaidFor" => $monthsPaid,
+        "phoneNumber" => $phoneNumber,
+        "clientReference" => $clientReference
+    ]);
+
+    $headers = [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $token
+    ];
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'POST',
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => $headers,
+    ]);
+
+    $response = curl_exec($curl);
+    $err = curl_error($curl);
+
+    curl_close($curl);
+    
+   
+
+    if ($err) {
+        return (object)[
+            "status" => "error",
+            "message" => "cURL Error: $err"
+        ];
+    }
+
+    // Attempt to decode the response
+    $decoded = json_decode($response);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return (object)[
+            "status" => "error",
+            "message" => "Invalid JSON response",
+            "raw" => $response
+        ];
+    }
+
+    return $response;
+}
+
 
 public function createVirtualCard($id)
 {
@@ -3382,7 +4960,7 @@ public function createVirtualCard($id)
     ];
  
     // print_r($data);
-    $url = 'https://issuecards.api.bridgecard.co/v1/issuing/sandbox/cards/create_card';
+    $url = 'https://issuecards.api.bridgecard.co/v1/issuing/cards/create_card';
     $res = $this->createCard($url, $data);
 //  $data['card_id'] = 
 
@@ -3459,17 +5037,17 @@ public function createVirtualCardholder()
         'address' => ['address' => $user->address, 'country' => 'Nigeria', 'state' => $sentData['state'], 'city' => $sentData['city'], 'postal_code' => $sentData['postal_code'], 'house_no' => $sentData['house_no']],
         'phone' => $user->phone,
         'email_address' => $user->email,
-        'identity'=> ['id_type'=>'NIGERIAN_BVN_VERIFICATION', 'bvn' => $sentData['bvn_no'], 'selfie_image' => $user->image ],
+        'identity'=> ['id_type'=>'NIGERIAN_BVN_VERIFICATION', 'bvn' => $userData->bvn_no, 'selfie_image' => $user->image ],
         'meta_data' => ['user_id' => $userData->user_id]
     ];
- 
+//  print_r(json_encode($data));exit;
     // print_r($data);
-    $url = 'https://issuecards.api.bridgecard.co/v1/issuing/sandbox/cardholder/register_cardholder';
+    $url = 'https://issuecards.api.bridgecard.co/v1/issuing/cardholder/register_cardholder';
     $res = $this->createCardHolder($url, $data);
     // print_r(json_encode($data));exit;
 
     $response = (json_decode($res));
-    
+    print_r(json_encode($response));exit;
     $card_id = $response->data->cardholder_id;
     
     $this->createVirtualCard($card_id);
