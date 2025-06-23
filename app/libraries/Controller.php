@@ -110,6 +110,64 @@ class Controller
    
 
 }
+
+public function createVirtualAcc()
+{
+    
+      try {
+            $userData = $this->RouteProtecion();
+        } catch (UnexpectedValueException $e) {
+            $res = [
+                'status' => 401,
+                'message' => $e->getMessage(),
+            ];
+            http_response_code(404);
+            print_r(json_encode($res));
+            exit;
+        }
+
+        $loginData = $this->getData();
+        
+        $userData2 = $this->userModel->getUserByid2($userData->user_id);
+    
+$url = 'https://api.hydrogenpay.com/api/v3/account/virtual-account';
+$url2 = 'https://qa-api.hydrogenpay.com/bevpay/api/v3/account/virtual-account';
+
+$headers = [
+    'Authorization: BDD89DB83E6BC532E7930159B525F162E96D40D9334CB21CF4D66C965A513D07',
+    'Content-Type: application/json'
+];
+
+$data = [
+    "accountLabel" => $userData2->fullname,
+    // "nin" => $userData->nin_no,
+     "bvn" => $this->generateElevenDigitValue(),
+    "phoneNumber" => $userData->phone,
+    "email" => $userData->email
+];
+// print_r(json_encode($data));exit;
+$ch = curl_init($url2);
+
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+
+$response = curl_exec($ch);
+
+if (curl_errno($ch)) {
+    return 'Curl error: ' . curl_error($ch);
+} else {
+    
+    return ($response);
+}
+
+curl_close($ch);
+
+
+
+}
+
     
 
 
@@ -287,7 +345,7 @@ curl_close($curl);
         // Return the response
         return $response;
     }
-    public function makePostRequest2($url, $data)
+    public function makePostRequest2($url, $data, $tkn)
     {
         // Initialize a cURL session
         $curl = curl_init();
@@ -304,7 +362,7 @@ curl_close($curl);
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS => $data,
             CURLOPT_HTTPHEADER => array(
-                'Authorization: Bearer ' . $data['api']
+                'Authorization: Bearer ' . $tkn
             ),
         ));
 
@@ -381,6 +439,36 @@ public function makePostReques992($url, $data, $token)
 
 public function sendCustomMessage($url, $payload) {
     try {
+$curl = curl_init();
+
+curl_setopt_array($curl, array(
+  CURLOPT_URL => $url,
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => '',
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 0,
+  CURLOPT_FOLLOWLOCATION => true,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => 'POST',
+  CURLOPT_POSTFIELDS => $payload,
+  CURLOPT_HTTPHEADER => array(
+    'Content-Type: application/json'
+  ),
+));
+
+$response = curl_exec($curl);
+
+curl_close($curl);
+return $response;
+} catch (Exception $e) {
+        // Handle exceptions
+        return "Error: " . $e->getMessage();
+    }
+}
+
+
+public function sendCustomMessage2($url, $payload) {
+    try {
         $authToken = "MA-ab82d4b6-10d3-40c3-88b6-cb1a5d638366";
         // Initialize cURL session
         $curl = curl_init();
@@ -426,6 +514,29 @@ return $response;
 }
 
 
+// function sendTwilioMessage($url, $body, $sid, $token) {
+//     try {
+//         // Create a new Twilio client instance
+//         $twilio = new Twilio\Rest\Client($sid, $token);
+        
+//         // Send the message
+//          $message = $twilio->messages->create($url, [
+//             "from" => '(229) 441-3190', // Use your Twilio-verified number
+//             "body" => $body
+//         ]);
+        
+//         // Return the message SID on success
+//         return $message->sid;
+//     } catch (Exception $e) {
+//         // Handle exceptions
+//         return "Error: " . $e->getMessage();
+//     }
+// }
+
+
+
+
+//         }
         public function createCardHolder($url, $data) {
             // Initialize cURL session
             $ch = curl_init();
@@ -658,11 +769,10 @@ return $response;
     public function sendOTPEmail($data)
     {
         $currentYear = date('Y');
-        $insta = 'https://api.veluxpay.com/public/assets/img/it.png';
-        $twitter = 'https://api.veluxpay.com/public/assets/img/tw.png';
-        $linkedin = 'https://api.veluxpay.com/public/assets/img/lkn.png';
-        // $img = "https://drive.google.com/uc?id=1BIvv3INlHEqs52KCaZQNzweM65t8LKaY";
-       $imagePath = 'https://api.paykingweb.com/public/assets/img/attachment/Rectangle%20115.png';
+        // $insta = 'https://api.veluxpay.com/public/assets/img/it.png';
+        // $twitter = 'https://api.veluxpay.com/public/assets/img/tw.png';
+        // $linkedin = 'https://api.veluxpay.com/public/assets/img/lkn.png';
+                $imagePath = 'https://api.paykingweb.com/public/assets/img/attachment/Rectangle%20115.png';
         $template_file = '/home/u561188727/domains/paykingweb.com/public_html/api/app/controllers/emails/validate_email.php';
 
         $swap_arr = array(
@@ -818,6 +928,15 @@ return $response;
         // Concatenate and then take the last 6 digits to ensure it's always 6 digits
         $combined = $random . $timeString;
         return substr(str_pad($combined, 9, '0', STR_PAD_LEFT), -9);
+    }
+    public function generateElevenDigitValue()
+    {
+        $random = mt_rand(0, 99999999999); // Generate a random number between 0 and 999
+        $timeString = date('s'); // Get current seconds (or you can use 'u' for microseconds)
+
+        // Concatenate and then take the last 6 digits to ensure it's always 6 digits
+        $combined = $random . $timeString;
+        return substr(str_pad($combined, 11, '0', STR_PAD_LEFT), -11);
     }
 
 
