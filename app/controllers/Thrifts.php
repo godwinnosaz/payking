@@ -206,12 +206,13 @@ http_response_code(404);
       "date" => trim($sentData["date"]),
       "address" => trim($sentData["address"]),
       "state" => trim($sentData["state"]),
-      "username" => trim($sentData["username"]),
+      "username" => $userData->uname,
       "desc" => trim($sentData["desc"]),
       "image" => $_FILES["image"],
       "email" => $userData->email,
       "user_id" =>  $userData->user_id,
       "event_id" =>  $this->generateUniqueId(),
+      "scanner_id" =>  $this->generateElevenDigitValue(),
 
 
     ); 
@@ -532,7 +533,7 @@ http_response_code(404);
       )));
       exit;
     }
-
+ 
 
     if (!$this->userModel->findUserByEmail1($data['email'])) {
       print_r(json_encode(array(
@@ -543,6 +544,29 @@ http_response_code(404);
     }
     if ($data['interval'] === 'daily') {
       if ($this->thriftModel->createDailyOsusu($data) && $this->thriftModel->createOsusu($data)) {
+          $array = [
+              $data['player1'],$data['player2'],$data['player3'],$data['player4'],$data['player5'], 
+              ];
+              $filtered = array_filter($array, function($value) {
+    return $value != 0;
+});
+
+
+
+// If you want to reindex the array (optional):
+$filtered = array_values($filtered);
+foreach ($filtered as $array_item){
+     $datass = [
+
+          'header' => "Join Daily Osusu",
+          'text' => "You have a new osusu request called ".$data['osusu_name']." created by ".$userData->uname,
+          'img' => $data['osusu_id'],
+          'user_id' => $array_item
+        ];
+        
+        $this->setNotificationsxx($datass);
+}
+          
         $res = json_encode(array(
           'status' => true,
           'message' => 'successful'
@@ -560,6 +584,28 @@ http_response_code(404);
       }
     } elseif ($data['interval'] === 'weekly') {
       if ($this->thriftModel->createWeeklyOsusu($data) && $this->thriftModel->createOsusu($data)) {
+           $array = [
+              $data['player1'],$data['player2'],$data['player3'],$data['player4'],$data['player5'], 
+              ];
+              $filtered = array_filter($array, function($value) {
+    return $value != 0;
+});
+
+
+
+// If you want to reindex the array (optional):
+$filtered = array_values($filtered);
+foreach ($filtered as $array_item){
+     $datass = [
+
+          'header' => "Join Weekly Osusu",
+          'text' => "You have a new osusu request called ".$data['osusu_name']." created by ".$userData->uname,
+          'img' => $data['osusu_id'],
+          'user_id' => $array_item
+        ];
+        
+        $this->setNotificationsxx($datass);
+}
         $res = json_encode(array(
           'status' => true,
           'message' => 'successful'
@@ -577,6 +623,28 @@ http_response_code(404);
       }
     } elseif ($data['interval'] === 'monthly') {
       if ($this->thriftModel->createMonthlyOsusu($data) && $this->thriftModel->createOsusu($data)) {
+           $array = [
+              $data['player1'],$data['player2'],$data['player3'],$data['player4'],$data['player5'], 
+              ];
+              $filtered = array_filter($array, function($value) {
+    return $value != 0;
+});
+
+
+
+// If you want to reindex the array (optional):
+$filtered = array_values($filtered);
+foreach ($filtered as $array_item){
+     $datass = [
+
+          'header' => "Join Monthly Osusu",
+          'text' => "You have a new osusu request called ".$data['osusu_name']." created by ".$userData->uname,
+          'img' => $data['osusu_id'],
+          'user_id' => $array_item
+        ];
+        
+        $this->setNotificationsxx($datass);
+}
         $res = json_encode(array(
           'status' => true,
           'message' => 'successful'
@@ -1044,6 +1112,8 @@ http_response_code(404);
     }
     exit;
 }
+
+
  public function getAllMyTicket()
 {
     try {
@@ -1078,6 +1148,72 @@ http_response_code(404);
     }
     exit;
 }
+
+
+
+ public function checkScannerId()
+{
+    try {
+        $userData = $this->RouteProtecion();
+    } catch (UnexpectedValueException | DomainException $e) {
+        $res = [
+            'status' => 401,
+            'message' => $e->getMessage(),
+        ];
+        http_response_code(401);
+        echo json_encode($res);
+        exit;
+    }
+    
+    $sentData = $this->getData();
+    
+    $sId = $sentData['scanner_id'];
+
+//   echo $sId;exit;
+
+    if ($this->thriftModel->checkScannerId($sId)) {
+        $response = [
+            'status' => true,
+            'message' => 'Confirmed',
+            // 'data' => $result,
+        ];
+        echo json_encode($response);
+    } else {
+        $response = [
+            'status' => false,
+            'message' => 'Does not exist',
+            // 'data' => [],
+        ];
+        http_response_code(200);
+        echo json_encode($response);
+    }
+    exit;
+}
+ public function scannEvent()
+{
+    try {
+        $userData = $this->RouteProtecion();
+    } catch (UnexpectedValueException | DomainException $e) {
+        $res = [
+            'status' => 401,
+            'message' => $e->getMessage(),
+        ];
+        http_response_code(401);
+        echo json_encode($res);
+        exit;
+    }
+    
+    $sentData = $this->getData();
+    
+    $sId = $sentData['scanner_id'];
+    $eId = $sentData['event_id'];
+
+//   echo $sId;exit;
+
+    $this->thriftModel->scannEvent($sId, $eId);
+}
+
+
  public function getCampaignDetails()
 {
     try {
@@ -1219,6 +1355,79 @@ http_response_code(404);
             'data' => [],
         ];
         http_response_code(200);
+        echo json_encode($response);
+    }
+    exit;
+}
+ public function confirm_osusu()
+{
+    try {
+        $userData = $this->RouteProtecion();
+    } catch (UnexpectedValueException | DomainException $e) {
+        $res = [
+            'status' => 401,
+            'message' => $e->getMessage(),
+        ];
+        http_response_code(401);
+        echo json_encode($res);
+        exit;
+    }
+ $sentData = $this->getData();
+
+    $osusu_id = $sentData['osusu_id'];
+    $result = $this->thriftModel->confirm_osusu($osusu_id, $userData->user_id);
+
+    if ($result) {
+        $response = [
+            'status' => true,
+            'message' => 'success',
+            
+        ];
+        echo json_encode($response);
+    } else {
+        $response = [
+            'status' => false,
+            'message' => 'failed to confirm osusu',
+           
+        ];
+        http_response_code(404);
+        echo json_encode($response);
+    }
+    exit;
+}
+
+ public function reject_osusu()
+{
+    try {
+        $userData = $this->RouteProtecion();
+    } catch (UnexpectedValueException | DomainException $e) {
+        $res = [
+            'status' => 401,
+            'message' => $e->getMessage(),
+        ];
+        http_response_code(401);
+        echo json_encode($res);
+        exit;
+    }
+ $sentData = $this->getData();
+
+    $osusu_id = $sentData['osusu_id'];
+    // $result = $this->thriftModel->reject_osusu($osusu_id, $userData->user_id);
+
+    if (1==1) {
+        $response = [
+            'status' => true,
+            'message' => 'success',
+            
+        ];
+        echo json_encode($response);
+    } else {
+        $response = [
+            'status' => false,
+            'message' => 'failed to reject osusu',
+           
+        ];
+        http_response_code(404);
         echo json_encode($response);
     }
     exit;
@@ -1400,147 +1609,140 @@ http_response_code(404);
       }
     }
   }
-  public function osusuPay()
-  {
+ public function osusuPay()
+{
     $dailyosusu = $this->thriftModel->getDailyOsusuRecords();
     $weeklyosusu = $this->thriftModel->getWeeklyOsusuRecords();
     $monthlyosusu = $this->thriftModel->getMonthlyOsusuRecords();
     $currentTime = date('H:i');
     $lastDayOfMonth = date('Y-m-t');
     $currentDate = date('Y-m-d');
+
     foreach ($dailyosusu as $dailyosusu_item) {
-      $daily = [
-        "osusu_type" => ($dailyosusu_item->osusu_type),
-        "amount" => ($dailyosusu_item->amount),
-        "duration" => ($dailyosusu_item->duration),
-        "email" => $dailyosusu_item->email,
-        "user_id" => $dailyosusu_item->user_id,
-        "osusu_id" => ($dailyosusu_item->osusu_id),
+        if ($dailyosusu_item->status != 1) continue;
 
-      ];
-      $data['player1'] = isset($dailyosusu_item->player1) && !empty($dailyosusu_item->player1) ? $dailyosusu_item->player1 : '0';
-      $data['player2'] = isset($dailyosusu_item->player2) && !empty($dailyosusu_item->player2) ? $dailyosusu_item->player2 : '0';
-      $data['player3'] = isset($dailyosusu_item->player3) && !empty($dailyosusu_item->player3) ? $dailyosusu_item->player3 : '0';
-      $data['player4'] = isset($dailyosusu_item->player4) && !empty($dailyosusu_item->player4) ? $dailyosusu_item->player4 : '0';
-      $data['player5'] = isset($dailyosusu_item->player5) && !empty($dailyosusu_item->player5) ? $dailyosusu_item->player5 : '0';
-      if ($currentTime >= '23:45') {
-        $validPlayers = array_filter($data, function ($player) {
-          return $player !== '0';
-      });
-      $shuffledPlayers = array_values($validPlayers);
-      shuffle($shuffledPlayers);
-      if (!isset($_SESSION)) {
-          session_start();
-      }
-      $usedPlayers = $_SESSION['usedPlayers'] ?? [];
-      $nextPlayer = null;
-      foreach ($shuffledPlayers as $player) {
-          if (!in_array($player, $usedPlayers)) {
-              $nextPlayer = $player;
-              $usedPlayers[] = $player;
-              break;
-          }
-      }
-      if ($nextPlayer === null) {
-          // $usedPlayers = [];
-            // $nextPlayer = $shuffledPlayers[0];
-            // $usedPlayers[] = $nextPlayer;
-            exit;
-      }
-      $_SESSION['usedPlayers'] = $usedPlayers;
-      
-        $this->thriftModel->payDailyOsusuFixed($daily, $validPlayers, $nextPlayer);
-      }
+        $daily = [
+            "osusu_type" => $dailyosusu_item->osusu_type,
+            "amount" => $dailyosusu_item->amount,
+            "duration" => $dailyosusu_item->duration,
+            "email" => $dailyosusu_item->email,
+            "user_id" => $dailyosusu_item->user_id,
+            "osusu_id" => $dailyosusu_item->osusu_id,
+        ];
+
+        $data['player1'] = !empty($dailyosusu_item->player1) ? $dailyosusu_item->player1 : '0';
+        $data['player2'] = !empty($dailyosusu_item->player2) ? $dailyosusu_item->player2 : '0';
+        $data['player3'] = !empty($dailyosusu_item->player3) ? $dailyosusu_item->player3 : '0';
+        $data['player4'] = !empty($dailyosusu_item->player4) ? $dailyosusu_item->player4 : '0';
+        $data['player5'] = !empty($dailyosusu_item->player5) ? $dailyosusu_item->player5 : '0';
+
+        if ($currentTime >= '23:45') {
+            $validPlayers = array_filter($data, fn($player) => $player !== '0');
+            $shuffledPlayers = array_values($validPlayers);
+            shuffle($shuffledPlayers);
+
+            if (!isset($_SESSION)) session_start();
+            $usedPlayers = $_SESSION['usedPlayers'] ?? [];
+
+            $nextPlayer = null;
+            foreach ($shuffledPlayers as $player) {
+                if (!in_array($player, $usedPlayers)) {
+                    $nextPlayer = $player;
+                    $usedPlayers[] = $player;
+                    break;
+                }
+            }
+
+            if ($nextPlayer === null) exit;
+            $_SESSION['usedPlayers'] = $usedPlayers;
+
+            $this->thriftModel->payDailyOsusuFixed($daily, $validPlayers, $nextPlayer);
+        }
     }
+
     foreach ($weeklyosusu as $weeklyosusu_item) {
-      $weekly = [
-        "osusu_type" => ($weeklyosusu_item->osusu_type),
-        "amount" => ($weeklyosusu_item->amount),
-        "duration" => ($weeklyosusu_item->duration),
-        "email" => $weeklyosusu_item->email,
-        "user_id" => $weeklyosusu_item->user_id,
-        "osusu_id" => ($weeklyosusu_item->osusu_id),
+        if ($weeklyosusu_item->status != 1) continue;
 
-      ];
-      
-        $data['player1'] = isset($dailyosusu_item->player1) && !empty($dailyosusu_item->player1) ? $dailyosusu_item->player1 : '0';
-        $data['player2'] = isset($dailyosusu_item->player2) && !empty($dailyosusu_item->player2) ? $dailyosusu_item->player2 : '0';
-        $data['player3'] = isset($dailyosusu_item->player3) && !empty($dailyosusu_item->player3) ? $dailyosusu_item->player3 : '0';
-        $data['player4'] = isset($dailyosusu_item->player4) && !empty($dailyosusu_item->player4) ? $dailyosusu_item->player4 : '0';
-        $data['player5'] = isset($dailyosusu_item->player5) && !empty($dailyosusu_item->player5) ? $dailyosusu_item->player5 : '0';
+        $weekly = [
+            "osusu_type" => $weeklyosusu_item->osusu_type,
+            "amount" => $weeklyosusu_item->amount,
+            "duration" => $weeklyosusu_item->duration,
+            "email" => $weeklyosusu_item->email,
+            "user_id" => $weeklyosusu_item->user_id,
+            "osusu_id" => $weeklyosusu_item->osusu_id,
+        ];
+
+        $data['player1'] = !empty($weeklyosusu_item->player1) ? $weeklyosusu_item->player1 : '0';
+        $data['player2'] = !empty($weeklyosusu_item->player2) ? $weeklyosusu_item->player2 : '0';
+        $data['player3'] = !empty($weeklyosusu_item->player3) ? $weeklyosusu_item->player3 : '0';
+        $data['player4'] = !empty($weeklyosusu_item->player4) ? $weeklyosusu_item->player4 : '0';
+        $data['player5'] = !empty($weeklyosusu_item->player5) ? $weeklyosusu_item->player5 : '0';
+
         if (date('l', strtotime($currentDate)) === 'Sunday' && $currentTime >= '23:45') {
-          $validPlayers = array_filter($data, function ($player) {
-            return $player !== '0';
-        });
-        $shuffledPlayers = array_values($validPlayers);
-        shuffle($shuffledPlayers);
-        if (!isset($_SESSION)) {
-            session_start();
-        }
-        $usedPlayers = $_SESSION['usedPlayers'] ?? [];
-        $nextPlayer = null;
-        foreach ($shuffledPlayers as $player) {
-            if (!in_array($player, $usedPlayers)) {
-                $nextPlayer = $player;
-                $usedPlayers[] = $player;
-                break;
+            $validPlayers = array_filter($data, fn($player) => $player !== '0');
+            $shuffledPlayers = array_values($validPlayers);
+            shuffle($shuffledPlayers);
+
+            if (!isset($_SESSION)) session_start();
+            $usedPlayers = $_SESSION['usedPlayers'] ?? [];
+
+            $nextPlayer = null;
+            foreach ($shuffledPlayers as $player) {
+                if (!in_array($player, $usedPlayers)) {
+                    $nextPlayer = $player;
+                    $usedPlayers[] = $player;
+                    break;
+                }
             }
+
+            if ($nextPlayer === null) exit;
+            $_SESSION['usedPlayers'] = $usedPlayers;
+
+            $this->thriftModel->payWeeklyOsusuFixed($weekly, $validPlayers, $nextPlayer);
         }
-        if ($nextPlayer === null) {
-             // $usedPlayers = [];
-            // $nextPlayer = $shuffledPlayers[0];
-            // $usedPlayers[] = $nextPlayer;
-            exit;
-        }
-        $_SESSION['usedPlayers'] = $usedPlayers;
-        
-        $this->thriftModel->payWeeklyOsusuFixed($weekly, $validPlayers, $nextPlayer);
-      }
     }
+
     foreach ($monthlyosusu as $monthlyosusu_item) {
-      $monthly = [
-        "thrift_type" => ($monthlyosusu_item->thrift_type),
-        "amount" => ($monthlyosusu_item->amount),
-        "duration" => ($monthlyosusu_item->duration),
-        "email" => $monthlyosusu_item->email,
-        "user_id" => $monthlyosusu_item->user_id,
-        "thrift_id" => ($monthlyosusu_item->thrift_id),
+        if ($monthlyosusu_item->status != 1) continue;
 
-      ];
+        $monthly = [
+            "thrift_type" => $monthlyosusu_item->thrift_type,
+            "amount" => $monthlyosusu_item->amount,
+            "duration" => $monthlyosusu_item->duration,
+            "email" => $monthlyosusu_item->email,
+            "user_id" => $monthlyosusu_item->user_id,
+            "thrift_id" => $monthlyosusu_item->thrift_id,
+        ];
 
-        $data['player1'] = isset($dailyosusu_item->player1) && !empty($dailyosusu_item->player1) ? $dailyosusu_item->player1 : '0';
-        $data['player2'] = isset($dailyosusu_item->player2) && !empty($dailyosusu_item->player2) ? $dailyosusu_item->player2 : '0';
-        $data['player3'] = isset($dailyosusu_item->player3) && !empty($dailyosusu_item->player3) ? $dailyosusu_item->player3 : '0';
-        $data['player4'] = isset($dailyosusu_item->player4) && !empty($dailyosusu_item->player4) ? $dailyosusu_item->player4 : '0';
-        $data['player5'] = isset($dailyosusu_item->player5) && !empty($dailyosusu_item->player5) ? $dailyosusu_item->player5 : '0';
+        $data['player1'] = !empty($monthlyosusu_item->player1) ? $monthlyosusu_item->player1 : '0';
+        $data['player2'] = !empty($monthlyosusu_item->player2) ? $monthlyosusu_item->player2 : '0';
+        $data['player3'] = !empty($monthlyosusu_item->player3) ? $monthlyosusu_item->player3 : '0';
+        $data['player4'] = !empty($monthlyosusu_item->player4) ? $monthlyosusu_item->player4 : '0';
+        $data['player5'] = !empty($monthlyosusu_item->player5) ? $monthlyosusu_item->player5 : '0';
+
         if ($currentDate === $lastDayOfMonth && $currentTime >= '23:45') {
-          $validPlayers = array_filter($data, function ($player) {
-            return $player !== '0';
-        });
-        $shuffledPlayers = array_values($validPlayers);
-        shuffle($shuffledPlayers);
-        if (!isset($_SESSION)) {
-            session_start();
-        }
-        $usedPlayers = $_SESSION['usedPlayers'] ?? [];
-        $nextPlayer = null;
-        foreach ($shuffledPlayers as $player) {
-            if (!in_array($player, $usedPlayers)) {
-                $nextPlayer = $player;
-                $usedPlayers[] = $player;
-                break;
+            $validPlayers = array_filter($data, fn($player) => $player !== '0');
+            $shuffledPlayers = array_values($validPlayers);
+            shuffle($shuffledPlayers);
+
+            if (!isset($_SESSION)) session_start();
+            $usedPlayers = $_SESSION['usedPlayers'] ?? [];
+
+            $nextPlayer = null;
+            foreach ($shuffledPlayers as $player) {
+                if (!in_array($player, $usedPlayers)) {
+                    $nextPlayer = $player;
+                    $usedPlayers[] = $player;
+                    break;
+                }
             }
+
+            if ($nextPlayer === null) exit;
+            $_SESSION['usedPlayers'] = $usedPlayers;
+
+            $this->thriftModel->payMonthlyOsusuFixed($monthly, $validPlayers, $nextPlayer);
         }
-        if ($nextPlayer === null) {
-            // $usedPlayers = [];
-            // $nextPlayer = $shuffledPlayers[0];
-            // $usedPlayers[] = $nextPlayer;
-            exit;
-        }
-        $_SESSION['usedPlayers'] = $usedPlayers;
-        
-        $this->thriftModel->payMonthlyOsusuFixed($monthly, $validPlayers, $nextPlayer);
-      }
     }
-  }
+}
+
 }
