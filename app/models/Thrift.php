@@ -1572,6 +1572,152 @@ class Thrift
         // Check roow
         return $rows;
     }
+    public function checkScannerId($date)
+    {
+        $this->db->query("SELECT * FROM ticket_details WHERE scanner_id = :scanner_id AND status = :status ");
+        $this->db->bind(":scanner_id", $date);
+        $this->db->bind(":status", 1);
+        $rows = $this->db->single();
+
+        if($rows)
+        {
+            return true;
+        }else{
+            return false;
+        }
+        
+    }
+    public function scannEvent($date, $eid)
+    {
+        $this->db->query("SELECT * FROM ticket_details WHERE scanner_id = :scanner_id AND event_id = :event_id AND status = :status ");
+        $this->db->bind(":scanner_id", $date);
+        $this->db->bind(":event_id", $eid);
+        $this->db->bind(":status", 1);
+        $rows = $this->db->single();
+// echo json_encode($rows);exit;
+        if($rows)
+        {
+            $this->db->query("SELECT * FROM ticket_tr WHERE event_id = :event_id AND status = :status");
+            $this->db->bind(":event_id", $eid);
+            $this->db->bind(":status", 1);
+            $row = $this->db->single();
+            
+            if(!$row){
+                 $response = [
+            'status' => false,
+            'message' => 'this ticket is not yet purchased',
+            // 'data' => $result,
+        ];
+        http_response_code(400);
+        echo json_encode($response);exit;
+            }
+            
+            if(isset($row) && $row->used === 0){
+                
+                 $this->db->query("INSERT INTO ticket_tr SET used = :used WHERE event_id = :event_id AND status = :status");
+            $this->db->bind(":event_id", $eid);
+            $this->db->bind(":used", 1);
+            $this->db->bind(":status", 1);
+            if($this->db->execute()){
+                 $response = [
+            'status' => true,
+            'message' => 'Confirmed',
+            // 'data' => $result,
+        ];
+        echo json_encode($response);
+            }else{
+                  $response = [
+            'status' => false,
+            'message' => 'unable to scan',
+            // 'data' => $result,
+        ];
+        http_response_code(400);
+        echo json_encode($response);
+            }
+                
+               
+            }else{
+                $response = [
+            'status' => false,
+            'message' => 'ticket already scanned',
+            // 'data' => $result,
+        ];
+        http_response_code(400);
+        echo json_encode($response);
+            }
+            
+        }else{
+             $response = [
+            'status' => true,
+            'message' => 'ticket ID and Scanner Id does not match',
+            // 'data' => $result,
+        ];
+        http_response_code(400);
+        echo json_encode($response);
+        }
+        
+    }
+public function confirm_osusu($osusu_id, $id) 
+{
+    $this->db->query("SELECT * FROM osusu_record WHERE id = :osusu_id AND 
+        (player1 = :id OR player2 = :id OR player3 = :id OR player4 = :id OR player5 = :id)");
+    $this->db->bind(":osusu_id", $osusu_id);
+    $this->db->bind(":id", $id);
+    $row = $this->db->single();
+
+    if ($row) {
+        // Determine which player column matched the ID
+        $playerColumn = null;
+        for ($i = 1; $i <= 5; $i++) {
+            if ($row["player$i"] == $id) {
+                $playerColumn = "player$i";
+                break;
+            }
+        }
+
+        if ($playerColumn) {
+            $isColumn = "is" . $playerColumn;
+
+            // Update this player's confirmation and increment count
+            $this->db->query("UPDATE osusu_record SET $isColumn = :id, confirm_count = confirm_count + 1 WHERE id = :osusu_id");
+            $this->db->bind(":id", $id);
+            $this->db->bind(":osusu_id", $osusu_id);
+            $this->db->execute();
+
+            // Re-fetch the row after update
+            $this->db->query("SELECT * FROM osusu_record WHERE id = :osusu_id");
+            $this->db->bind(":osusu_id", $osusu_id);
+            $updatedRow = $this->db->single();
+
+            // Check if all non-zero players have confirmed
+            $allConfirmed = true;
+            for ($i = 1; $i <= 5; $i++) {
+                $playerVal = $updatedRow["player$i"];
+                $confirmVal = $updatedRow["isplayer$i"];
+
+                if ($playerVal != 0 && $confirmVal != $playerVal) {
+                    $allConfirmed = false;
+                    break;
+                }
+            }
+
+            // If all confirmed, update status = 1
+            if ($allConfirmed) {
+                $this->db->query("UPDATE osusu_record SET status = 1 WHERE id = :osusu_id");
+                $this->db->bind(":osusu_id", $osusu_id);
+                $this->db->execute();
+            }
+
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
+
     public function getCampaignDetails($date)
     {
         $this->db->query("SELECT * FROM campaign_details WHERE campaign_id = :campaign_id AND status = :status");
@@ -1606,6 +1752,18 @@ class Thrift
         }
 
     }
+    // public function getTicketDetails($date)
+    // {
+    //     $this->db->query("SELECT * FROM ticket_details WHERE event_id = :event_id AND status = :status");
+    //     $this->db->bind(":event_id", $date);
+    //     $this->db->bind(":status", 1);
+    //     $rows = $this->db->single();
+
+    //     // Check roow
+    //     return $rows;
+    // }
+    
+    
     public function getTicketDetails($date)
     {
         $this->db->query("SELECT * FROM ticket_details WHERE event_id = :event_id AND status = :status");
@@ -1646,6 +1804,25 @@ class Thrift
     public function getMonthlyThriftRecords()
     {
         $this->db->query("SELECT * FROM monthly_thrift_record");
+        $rows = $this->db->resultSet();
+        return $rows;
+    }
+    public function getDailyOsusuRecords()
+    {
+        $this->db->query("SELECT * FROM daily_osusu_record");
+        $rows = $this->db->resultSet();
+
+        return $rows;
+    }
+    public function getWeeklyOsusuRecords()
+    {
+        $this->db->query("SELECT * FROM weekly_osusu_record");
+        $rows = $this->db->resultSet();
+        return $rows;
+    }
+    public function getMonthlyOsusuRecords()
+    {
+        $this->db->query("SELECT * FROM monthly_osusu_record");
         $rows = $this->db->resultSet();
         return $rows;
     }
