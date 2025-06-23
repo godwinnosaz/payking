@@ -25,6 +25,38 @@ class Transaction
           return false;
       }
   }
+     public function findUserByTagName($email)
+  {
+      $this->db->query("SELECT * FROM initkey WHERE  uname = :uname");
+
+      // Bind Values
+      $this->db->bind(':uname', $email);
+
+      $row = $this->db->single();
+
+      // Check roow
+      if ($this->db->rowCount() > 0) {
+          return $row;
+      } else {
+          return false;
+      }
+  }
+     public function findUserById($email)
+  {
+      $this->db->query("SELECT * FROM userprofile WHERE  user_id = :user_id");
+
+      // Bind Values
+      $this->db->bind(':user_id', $email);
+
+      $row = $this->db->single();
+
+      // Check roow
+      if ($this->db->rowCount() > 0) {
+          return $row;
+      } else {
+          return false;
+      }
+  }
      public function findCampaignById($email)
   {
       $this->db->query("SELECT * FROM campaign_details WHERE  campaign_id = :campaign_id");
@@ -192,6 +224,117 @@ class Transaction
 
             $this->db->bind(":activity", $activity);
             $this->db->bind(":user_id", $datax["s_id"]);
+            $this->db->bind(":activity_id", $datax["tr_id"]);
+            $this->db->bind(":process_id", $processID);
+            $this->db->bind(":amount", $datax["amount"]);
+
+            if ($this->db->execute()) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+      } else {
+        //   return false;
+        if (!$this->db->execute()) {
+    // Log or display the error
+//   echo "error here";
+    return false;
+}
+      }
+
+
+
+
+  }
+  
+  public function update_withd($datax){
+       $this->db->query('SELECT * FROM user_accounts WHERE  email = :email and  user_id = :user_id ');
+      // Bind Valuesrid
+      $this->db->bind(':email', $datax['email']);
+      $this->db->bind(':user_id', $datax['user_id']);
+      $row = $this->db->single();
+
+      // Check roow
+      if ($this->db->rowCount() > 0) {
+        if ($row->savings > $datax['amount']) {
+           $newFund = $row->savings - $datax['amount'];
+             $this->db->query('UPDATE user_accounts set savings = :savings WHERE  email = :email and  user_id = :user_id');
+
+        $this->db->bind(':email', $datax['email']);
+        $this->db->bind(':user_id', $datax['user_id']);
+        $this->db->bind(':savings', $newFund);
+        if ($this->db->execute()){
+            
+        }else{
+            return false;
+        }
+        
+        }else{
+            return false;
+        }
+          
+      }else{
+          return false;
+      }
+  }
+  
+  
+  public function  withdrawFunds($datax)
+  {
+      $this->update_withd($datax);
+      
+      
+
+      $this->db->query('INSERT INTO  withdrawal_ (email,full_name, user_id, transaction_status, amount, transaction_id, bank_name,bank_code,account,account_name, date) VALUES( :email,:full_name, :user_id, :transaction_status, :amount, :transaction_id, :bank_name, :bank_code,:account,:account_name,   :date)');
+      // Bind Valuesrid
+      $this->db->bind(':email', $datax['email']);
+      $this->db->bind(':full_name', $datax['fullname']);
+      $this->db->bind(':user_id', $datax['user_id']);
+      $this->db->bind(':transaction_status', $datax['message']);
+      $this->db->bind(':amount', $datax['amount']);
+      $this->db->bind(':transaction_id', $datax['tr_id']);
+      $this->db->bind(':bank_name', $datax['bank_name']);
+      $this->db->bind(':bank_code', $datax['bank_code']);
+      $this->db->bind(':account', $datax['accountNo']);
+      $this->db->bind(':account_name', $datax['accname']);
+      // Set the PHP timezone to GMT
+      date_default_timezone_set('Europe/Berlin'); // or 'Africa/Lagos'
+     $this->db->bind(':date', date('Y-m-d H:i:s'));
+    
+      //$this->db->execute();
+
+
+        if ($this->db->execute()) {
+          
+          // Insert into all_transactions table
+       $this->db->query('INSERT INTO  all_transactions (email,sender_username, user_id, transaction_status, amount, transaction_id, transaction_type, date) VALUES( :email,:sender_username, :user_id, :transaction_status, :amount, :transaction_id, :transaction_type, :date)');
+      // Bind Valuesrid
+      $this->db->bind(':email', $datax['email']);
+      $this->db->bind(':sender_username', $datax['fullname']);
+      $this->db->bind(':user_id', $datax['user_id']);
+      $this->db->bind(':transaction_status', $datax['message']);
+      $this->db->bind(':amount', $datax['amount']);
+      $this->db->bind(':transaction_id', $datax['tr_id']);
+    //   $this->db->bind(':transaction_ref', $datax['t_ref']);
+      $this->db->bind(':transaction_type', 'WITHDRAWAL');
+       // Set the PHP timezone to GMT
+    date_default_timezone_set('Europe/Berlin'); // or 'Africa/Lagos'
+      $this->db->bind(':date', date('Y-m-d H:i:s'));
+    
+     if ($this->db->execute()) {
+            $activity = "WITHDRAWAL TO BANK";
+            $processID = "log_" . md5(time());
+            $this->db->query("INSERT INTO activity_log 
+        (activity, user_id, activity_id, process_id, amount) 
+        VALUES 
+        (:activity, :user_id, :activity_id, :process_id, :amount)");
+
+            $this->db->bind(":activity", $activity);
+            $this->db->bind(":user_id", $datax["user_id"]);
             $this->db->bind(":activity_id", $datax["tr_id"]);
             $this->db->bind(":process_id", $processID);
             $this->db->bind(":amount", $datax["amount"]);
@@ -737,16 +880,11 @@ class Transaction
     $this->db->query(
         "INSERT INTO payments (
             payment_id, payment_status, pay_address, price_amount, price_currency, 
-            pay_amount, amount_received, pay_currency, order_id, order_description, 
-            ipn_callback_url, created_at, updated_at, purchase_id, network, 
-            expiration_estimate_date, is_fixed_rate, is_fee_paid_by_user, 
-            valid_until, type, product, origin_ip, email, user_id
+            pay_amount, amount_received, pay_currency, order_description, created_at, updated_at, purchase_id, type, email, user_id
         ) VALUES (
             :payment_id, :payment_status, :pay_address, :price_amount, :price_currency, 
-            :pay_amount, :amount_received, :pay_currency, :order_id, :order_description, 
-            :ipn_callback_url, :created_at, :updated_at, :purchase_id, :network, 
-            :expiration_estimate_date, :is_fixed_rate, :is_fee_paid_by_user, 
-            :valid_until, :type, :product, :origin_ip, :email, :user_id
+            :pay_amount, :amount_received, :pay_currency, :order_description, 
+             :created_at, :updated_at, :purchase_id, :type, :email, :user_id
         ) ON DUPLICATE KEY UPDATE 
             payment_status = :payment_status, 
             updated_at = :updated_at,
@@ -754,28 +892,62 @@ class Transaction
     );
 
     // Bind parameters
-    $this->db->bind(':payment_id', $data['payment_id']);
-    $this->db->bind(':payment_status', $data['payment_status']);
-    $this->db->bind(':pay_address', $data['pay_address']);
-    $this->db->bind(':price_amount', $data['price_amount']);
-    $this->db->bind(':price_currency', $data['price_currency']);
-    $this->db->bind(':pay_amount', $data['pay_amount']);
-    $this->db->bind(':amount_received', $data['amount_received']);
-    $this->db->bind(':pay_currency', $data['pay_currency']);
-    $this->db->bind(':order_id', $data['order_id']);
-    $this->db->bind(':order_description', $data['order_description']);
-    $this->db->bind(':ipn_callback_url', $data['ipn_callback_url']);
-    $this->db->bind(':created_at', $data['created_at']);
-    $this->db->bind(':updated_at', $data['updated_at']);
-    $this->db->bind(':purchase_id', $data['purchase_id']);
-    $this->db->bind(':network', $data['network']);
-    $this->db->bind(':expiration_estimate_date', $data['expiration_estimate_date']);
-    $this->db->bind(':is_fixed_rate', $data['is_fixed_rate']);
-    $this->db->bind(':is_fee_paid_by_user', $data['is_fee_paid_by_user']);
-    $this->db->bind(':valid_until', $data['valid_until']);
+    $this->db->bind(':payment_id', $data['transaction_id']);
+    $this->db->bind(':payment_status', $data['status']);
+    $this->db->bind(':pay_address', $data['wallet_address']);
+    $this->db->bind(':price_amount', $data['amount_in_dollar']);
+    $this->db->bind(':price_currency', $data['currency']);
+    $this->db->bind(':pay_amount', $data['payking_amount_to_pay']);
+    $this->db->bind(':amount_received', $data['payking_amount_to_pay']);
+
+    $this->db->bind(':order_description', $data['message']);
+    $this->db->bind(':pay_currency', $data['currency']); 
+    $this->db->bind(':created_at', $data['createdAt']);
+    $this->db->bind(':updated_at', $data['updatedAt']);
+    $this->db->bind(':purchase_id', $data['_id']);
+ 
     $this->db->bind(':type', $data['type']);
-    $this->db->bind(':product', $data['product']);
-    $this->db->bind(':origin_ip', $data['origin_ip']);
+
+    $this->db->bind(':email', $data['email']);
+    $this->db->bind(':user_id', $data['user_id']);
+
+    // Execute query
+    return $this->db->execute();
+}
+
+    public function creatPayment2($data)
+{
+    $this->db->query(
+        "INSERT INTO payments (
+            payment_id, payment_status, pay_address, price_amount, price_currency, 
+            pay_amount, amount_received, pay_currency, order_description, created_at, updated_at, purchase_id, type, email, user_id
+        ) VALUES (
+            :payment_id, :payment_status, :pay_address, :price_amount, :price_currency, 
+            :pay_amount, :amount_received, :pay_currency, :order_description, 
+             :created_at, :updated_at, :purchase_id, :type, :email, :user_id
+        ) ON DUPLICATE KEY UPDATE 
+            payment_status = :payment_status, 
+            updated_at = :updated_at,
+            amount_received = :amount_received"
+    );
+
+    // Bind parameters
+    $this->db->bind(':payment_id', $data['transaction_id']);
+    $this->db->bind(':payment_status', $data['status']);
+    $this->db->bind(':pay_address', "");
+    $this->db->bind(':price_amount', $data['amount_in_dollar']);
+    $this->db->bind(':price_currency',"");
+    $this->db->bind(':pay_amount', $data['payking_amount_to_pay']);
+    $this->db->bind(':amount_received', $data['payking_amount_to_pay']);
+
+    $this->db->bind(':order_description', $data['message']);
+    $this->db->bind(':pay_currency', ""); 
+    $this->db->bind(':created_at', $data['createdAt']);
+    $this->db->bind(':updated_at', $data['updatedAt']);
+    $this->db->bind(':purchase_id', $data['_id']);
+ 
+    $this->db->bind(':type', $data['type']);
+
     $this->db->bind(':email', $data['email']);
     $this->db->bind(':user_id', $data['user_id']);
 
@@ -1385,7 +1557,7 @@ class Transaction
                 $rowx = $this->db->single();
         if ($this->db->rowCount() > 0) {
         
-            $newFundx = $rowx->ticket_account + $datax['amount'];
+            $newFundx = $rowx->event_account + $datax['amount'];
             $this->db->query('UPDATE user_accounts set event_account = :event_account WHERE  email = :email and  user_id = :user_id');
 
             $this->db->bind(':email', $datax['r_e']);
