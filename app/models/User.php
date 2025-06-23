@@ -22,13 +22,212 @@ class User
         } else{
             return false;
         
-        
+       
         
         }
 
 
     }
     
+    public function ensureUserExists($userId) {
+    $this->db->query("SELECT id FROM users WHERE id = :id");
+    $this->db->bind(':id', $userId);
+    $this->db->execute();
+
+    if ($this->db->rowCount() === 0) {
+        // Insert with minimal default data
+        $this->db->query("INSERT INTO users (id, username, email, created_at) VALUES (:id, :username, :email, NOW())");
+        $this->db->bind(':id', $userId);
+        $this->db->bind(':username', 'Guest_' . substr($userId, -5));
+        $this->db->bind(':email', 'guest_' . substr($userId, -5) . '@example.com');
+        $this->db->execute();
+    }
+}
+
+    
+    public function saveUsers($users)
+{
+    foreach ($users as $user) {
+        $this->db->query("
+            INSERT INTO users (
+                id, username, email, phone, first_name, last_name,
+                role_name, department, status, created_at
+            ) VALUES (
+                :id, :username, :email, :phone, :first_name, :last_name,
+                :role_name, :department, :status, :created_at
+            )
+            ON DUPLICATE KEY UPDATE
+                username = VALUES(username),
+                email = VALUES(email),
+                phone = VALUES(phone),
+                first_name = VALUES(first_name),
+                last_name = VALUES(last_name),
+                role_name = VALUES(role_name),
+                department = VALUES(department),
+                status = VALUES(status),
+                created_at = VALUES(created_at)
+        ");
+
+        $this->db->bind(':id', $user['id']);
+        $this->db->bind(':username', $user['username']);
+        $this->db->bind(':email', $user['email']);
+        $this->db->bind(':phone', $user['phone']);
+        $this->db->bind(':first_name', $user['firstName']);
+        $this->db->bind(':last_name', $user['lastName']);
+        $this->db->bind(':role_name', $user['roleName']);
+        $this->db->bind(':department', $user['department']);
+        $this->db->bind(':status', $user['status']);
+        $this->db->bind(':created_at', date('Y-m-d H:i:s'));
+
+        if (!$this->db->execute()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+    
+    public function getChatsByUserId($userId) {
+    $this->db->query("SELECT * FROM personal_chats WHERE user1_id = :userId OR user2_id = :userId ORDER BY updated_at DESC");
+    $this->db->bind(':userId', $userId);
+    return $this->db->resultSet();
+}
+
+public function markMessagesAsRead($chatId, $userId) {
+    $this->db->query("UPDATE personal_messages SET is_read = 1 WHERE chat_id = :chatId AND receiver_id = :userId AND is_read = 0");
+    $this->db->bind(':chatId', $chatId);
+    $this->db->bind(':userId', $userId);
+    $this->db->execute();
+
+    // Reset unread count in personal_chats
+    $this->db->query("
+        UPDATE personal_chats 
+        SET unread_count_user1 = IF(user1_id = :userId, 0, unread_count_user1), 
+            unread_count_user2 = IF(user2_id = :userId, 0, unread_count_user2) 
+        WHERE id = :chatId
+    ");
+    $this->db->bind(':userId', $userId);
+    $this->db->bind(':chatId', $chatId);
+    $this->db->execute();
+}
+
+public function getUnreadMessageCount($userId) {
+    $this->db->query("
+        SELECT 
+            SUM(
+                CASE 
+                    WHEN user1_id = :userId THEN unread_count_user1
+                    WHEN user2_id = :userId THEN unread_count_user2
+                    ELSE 0
+                END
+            ) AS total_unread
+        FROM personal_chats
+        WHERE user1_id = :userId OR user2_id = :userId
+    ");
+    $this->db->bind(':userId', $userId);
+    $row = $this->db->single();
+    return $row['total_unread'] ?? 0;
+}
+
+    
+    public function getMessagesByChatId($chatId) {
+    $this->db->query("SELECT * FROM personal_messages WHERE chat_id = :chatId ORDER BY timestamp ASC");
+    $this->db->bind(':chatId', $chatId);
+    return $this->db->resultSet();
+}
+
+    
+public function getOrCreateChat($userId1, $userId2) {
+    // Normalize order
+    $ids = [$userId1, $userId2];
+    sort($ids);
+    $uid1 = $ids[0];
+    $uid2 = $ids[1];
+
+    // Check if chat exists
+    $this->db->query("SELECT * FROM personal_chats WHERE user1_id = :u1 AND user2_id = :u2");
+    $this->db->bind(':u1', $uid1);
+    $this->db->bind(':u2', $uid2);
+    $chat = $this->db->single();
+
+    if ($chat) {
+        return $chat;
+    }
+
+    // Create new chat
+    $this->db->query("INSERT INTO personal_chats (user1_id, user2_id, updated_at) VALUES (:u1, :u2, NOW())");
+    $this->db->bind(':u1', $uid1);
+    $this->db->bind(':u2', $uid2);
+    if ($this->db->execute()) {
+        $chatId = $this->db->lastInsertId();
+
+        return [
+            'id' => $chatId,
+            'participants' => [$uid1, $uid2],
+            'lastMessage' => null,
+            'updatedAt' => date('Y-m-d H:i:s'),
+            'unreadCount' => [$uid1 => 0, $uid2 => 0],
+        ];
+    }
+
+    return false;
+}
+
+// In UserModel.php
+
+public function savePersonalMessage($msg) {
+    
+
+    try {
+        // 1. Insert message into personal_messages
+        $this->db->query("INSERT INTO personal_messages (
+            id, chat_id, sender_id, receiver_id, content, timestamp, is_read
+        ) VALUES (
+            :id, :chatId, :senderId, :receiverId, :content, :timestamp, :isRead
+        )");
+
+        $this->db->bind(':id', $msg['id']);
+        $this->db->bind(':chatId', $msg['chatId']);
+        $this->db->bind(':senderId', $msg['senderId']);
+        $this->db->bind(':receiverId', $msg['receiverId']);
+        $this->db->bind(':content', $msg['content']);
+        $this->db->bind(':timestamp', date('Y-m-d H:i:s', strtotime($msg['timestamp'])));
+        $this->db->bind(':isRead', $msg['read'] ? 1 : 0);
+
+        $this->db->execute();
+
+        // 2. Update personal_chats metadata
+        $this->db->query("UPDATE personal_chats SET
+            last_message = :lastMessage,
+            updated_at = :updatedAt,
+            unread_count_user1 = CASE 
+                WHEN user1_id = :receiver THEN unread_count_user1 + 1 
+                ELSE unread_count_user1 
+            END,
+            unread_count_user2 = CASE 
+                WHEN user2_id = :receiver THEN unread_count_user2 + 1 
+                ELSE unread_count_user2 
+            END
+            WHERE id = :chatId
+        ");
+
+        $this->db->bind(':lastMessage', $msg['content']);
+        $this->db->bind(':updatedAt', date('Y-m-d H:i:s', strtotime($msg['timestamp'])));
+        $this->db->bind(':receiver', $msg['receiverId']);
+        $this->db->bind(':chatId', $msg['chatId']);
+
+        $this->db->execute();
+
+        $this->db->commit();
+        return true;
+    } catch (Exception $e) {
+        $this->db->rollback();
+        return false;
+    }
+}
+
+
   public function getNotifications($id) {
     $this->db->query("SELECT * FROM notification WHERE user_id = :id OR user_id = '' OR user_id = 0 ORDER BY id DESC");
 
@@ -126,6 +325,7 @@ class User
                 address = :address,
                 state = :state,
                 event_id = :event_id,
+                scanner_id = :scanner_id,
                 date = :date
                 ");
         $this->db->bind(":email", $data["email"]);
@@ -140,6 +340,7 @@ class User
         $this->db->bind(":address", $data["address"]);
         $this->db->bind(":state", $data["state"]);
         $this->db->bind(":event_id", $data["event_id"]);
+        $this->db->bind(":scanner_id", $data["scanner_id"]);
         $this->db->bind(":date", $data["date"]);
         if ($this->db->execute()) {
              $activity = "TICKET CREATION";
@@ -226,6 +427,27 @@ class User
                 }
       
     }
+      public function virtualUpdate($res, $data)
+    {
+     
+            $this->db->query(" UPDATE   user_accounts 
+            SET 
+                account_name = :account_name,
+                account_no = :account_no,
+                bank_name = :bank_name
+                 WHERE  user_id = :user_id AND   email = :email");
+                $this->db->bind(":email", $data['email']);
+                $this->db->bind(":user_id", $data['user_id']);
+                $this->db->bind(":account_name", $res->accountName);
+                $this->db->bind(":account_no", $res->account);
+                $this->db->bind(":bank_name", $res->bankName);
+                if ($this->db->execute()) {
+                    return true;
+                } else {
+                    return false;
+                }
+      
+    }
 
 
 
@@ -261,7 +483,17 @@ class User
             return $row;
         } else {
           
-           return false;
+                   $this->db->query ("SELECT * FROM initkey_ WHERE email = :email");
+         $this->db->bind(':email', $email);
+
+        $row = $this->db->single();
+
+        if($this->db->rowCount() > 0)
+        {
+            return $row;
+        }else{
+            return false;
+        }
        
         
         }
@@ -357,7 +589,7 @@ public function findUserByEmail($email)
     if ($this->db->rowCount() > 0) {
         return true;
     } else {
-        return false;
+return false;
     }
 }
 
@@ -367,6 +599,33 @@ public function findUserByEmail1($email)
 
     // Bind Values
     $this->db->bind(':email', $email);
+
+    $row = $this->db->single();
+
+    // Check row
+    if ($this->db->rowCount() > 0) {
+        return true;
+    } else {
+                $this->db->query("SELECT * FROM initkey_ WHERE email = :email");
+                $this->db->bind(':email', $email);
+
+        $row = $this->db->single();
+
+        if($this->db->rowCount() > 0)
+        {
+            return true ;
+        }else{
+            return false;
+        }
+    }
+}
+
+public function findUserByNin($email)
+{
+    $this->db->query("SELECT * FROM initkey WHERE nin_no = :nin_no");
+
+    // Bind Values
+    $this->db->bind(':nin_no', $email);
 
     $row = $this->db->single();
 
@@ -433,6 +692,25 @@ public function findHospitalByEmail2($email)
     public function getUserByid($id)
     {
         $this->db->query("SELECT * FROM initkey WHERE  user_id = :user_id");
+
+        // Bind Values
+        $this->db->bind(':user_id', $id);
+
+        $row1 = $this->db->single();
+
+        // Check roow
+       
+         if ($this->db->rowCount() > 0) {
+             return $row1;
+        } else {
+          
+            return false;
+        }
+    
+    }
+    public function getUserByid2($id)
+    {
+        $this->db->query("SELECT * FROM userprofile WHERE  user_id = :user_id");
 
         // Bind Values
         $this->db->bind(':user_id', $id);
@@ -545,6 +823,7 @@ public function findHospitalByEmail2($email)
         $this->db->bind(':email_reset_token', $data['otp']);
         $this->db->bind(':phone', $data['mobileNumber']);
         $this->db->bind(':reset_token_set_date', $currentDate);
+        //   $this->db->bind(':phone_validated', 1);
         $this->db->bind(':password_reset_token_time', $tokenTime);
         // Execute
         if ($this->db->execute()) {
@@ -879,11 +1158,13 @@ public function findHospitalByEmail2($email)
     public function edit_user($data) {
         $this->db->query(" UPDATE   initkey 
             SET 
-                uname = :uname
+                uname = :uname,
+                nin_no = :nin_no
                   WHERE  user_id = :user_id AND email = :email");
         $this->db->bind(":email", $data["email"]);
         $this->db->bind(":uname", $data["uname"]);
         $this->db->bind(":user_id", $data["user_id"]);
+         $this->db->bind(":nin_no", $data["nin"]);
 
        if ($this->db->execute()) {
         $this->db->query(" UPDATE   userprofile 
@@ -892,7 +1173,7 @@ public function findHospitalByEmail2($email)
             address = :address,
             gender = :gender,
             dob = :dob,
-           
+           nin_no = :nin_no,
             uname = :uname,  
             image = :image
              WHERE  user_id = :user_id AND   email = :email");
@@ -900,10 +1181,95 @@ public function findHospitalByEmail2($email)
     $this->db->bind(":uname", $data["uname"]);
     $this->db->bind(":user_id", $data["user_id"]);
     $this->db->bind(":address", $data["address"]);
+    $this->db->bind(":nin_no", $data["nin"]);
     $this->db->bind(":image", $data["image"]);
     $this->db->bind(":fullname", $data["fullname"]);
     $this->db->bind(":gender", $data["gender"]);
     $this->db->bind(":dob", $data["dob"]);
+
+        if ($this->db->execute()) {
+            return true;
+        }else{
+            return false;
+        }
+       }else{
+        return false;
+       }
+    }
+    
+    
+
+    public function validAccount($data) {
+        $this->db->query(" UPDATE   initkey 
+            SET 
+                nin_no = :nin_no,
+                bvn_no = :bvn_no,
+                nin_img = :nin_img,
+                bvn_img = :bvn_img
+                  WHERE  user_id = :user_id AND email = :email");
+        $this->db->bind(":email", $data["email"]);
+        $this->db->bind(":nin_no", $data["nin"]);
+        $this->db->bind(":bvn_no", 0);
+        $this->db->bind(":nin_img", $data["nin_img"]);
+        $this->db->bind(":bvn_img", 0);
+        $this->db->bind(":user_id", $data["user_id"]);
+
+       if ($this->db->execute()) {
+        $this->db->query(" UPDATE   userprofile 
+        SET 
+            nin_no = :nin_no,
+                bvn_no = :bvn_no,
+                nin_img = :nin_img,
+                nin_img = :nin_img
+             WHERE  user_id = :user_id AND   email = :email");
+       $this->db->bind(":email", $data["email"]);
+        $this->db->bind(":nin_no", $data["nin"]);
+        $this->db->bind(":bvn_no", 0);
+        $this->db->bind(":nin_img", $data["nin_img"]);
+        $this->db->bind(":bvn_img", 0);
+        $this->db->bind(":user_id", $data["user_id"]);
+
+
+        if ($this->db->execute()) {
+            return true;
+        }else{
+            return false;
+        }
+       }else{
+        return false;
+       }
+    }
+    
+
+    public function validAccountBvn($data) {
+        $this->db->query(" UPDATE   initkey 
+            SET 
+   
+                bvn_no = :bvn_no,
+             
+                bvn_img = :bvn_img
+                  WHERE  user_id = :user_id AND email = :email");
+        $this->db->bind(":email", $data["email"]);
+      
+        $this->db->bind(":bvn_no", $data['bvn']);
+       
+        $this->db->bind(":bvn_img", 0);
+        $this->db->bind(":user_id", $data["user_id"]);
+
+       if ($this->db->execute()) {
+        $this->db->query(" UPDATE   userprofile 
+        SET 
+          
+                bvn_no = :bvn_no,
+             bvn_img = :bvn_img
+             WHERE  user_id = :user_id AND   email = :email");
+       $this->db->bind(":email", $data["email"]);
+        
+        $this->db->bind(":bvn_no", $data['bvn']);
+       
+        $this->db->bind(":bvn_img", 0);
+        $this->db->bind(":user_id", $data["user_id"]);
+
 
         if ($this->db->execute()) {
             return true;
